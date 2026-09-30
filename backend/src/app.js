@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import { env } from './config/env.js'
 import { errorHandler, notFound } from './middleware/error.middleware.js'
+import authRoutes from './routes/auth.routes.js'
 
 const app = express()
 
@@ -12,7 +13,7 @@ app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'Server is healthy' })
 })
 
-// Feature routes are mounted here in later modules.
+app.use('/api/auth', authRoutes)
 
 app.use(notFound)
 app.use(errorHandler)
