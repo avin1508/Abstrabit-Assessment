@@ -6,7 +6,8 @@ import StatusBadge from '../ui/StatusBadge.jsx'
 function chunkLabel(document) {
   if (document.chunkCount != null) return `${formatNumber(document.chunkCount)} chunks`
   if (document.status === 'failed') return 'Not indexed'
-  return 'Indexing…'
+  if (document.status === 'processing') return 'Indexing…'
+  return '—'
 }
 
 // Compact document row: file, type/size, chunk count, upload time, status.

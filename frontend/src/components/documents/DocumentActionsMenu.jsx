@@ -4,7 +4,7 @@ import IconButton from '../ui/IconButton.jsx'
 
 // Per-document actions. Write actions are hidden for read-only members.
 export default function DocumentActionsMenu({ document, writable, onOpen, onRetry, onDelete }) {
-  const canRetry = writable && document.status === 'failed' && document.failedStage !== 'validating'
+  const canRetry = writable && document.status === 'failed'
 
   const items = [
     { label: 'View details', icon: PanelRightOpen, onSelect: () => onOpen(document) },

@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { FileSearch, FolderOpen, RefreshCw, Search, Upload, X } from 'lucide-react'
 import { canWrite } from '../utils/permissions.js'
-import useAuth from '../hooks/useAuth.js'
 import useDocuments from '../hooks/useDocuments.js'
 import useDocumentUploads from '../hooks/useDocumentUploads.js'
 import useToast from '../hooks/useToast.js'
@@ -12,7 +11,6 @@ import DocumentDetailsDrawer from '../components/documents/DocumentDetailsDrawer
 import DocumentsTable, { DocumentsTableSkeleton } from '../components/documents/DocumentsTable.jsx'
 import UploadDropzone from '../components/documents/UploadDropzone.jsx'
 import UploadQueue from '../components/documents/UploadQueue.jsx'
-import { statusBucket } from '../components/documents/ingestion.js'
 import WorkspaceScope from '../components/workspace/WorkspaceScope.jsx'
 import {
   Alert,
@@ -36,17 +34,12 @@ const FILTERS = [
 ]
 
 export default function DocumentsPage() {
-  const { user } = useAuth()
   const { activeWorkspace: workspace } = useWorkspace()
   const { toast } = useToast()
   const writable = canWrite(workspace)
 
-  const { documents, status, error, reload, addDocument, retry, remove } = useDocuments(workspace.id)
-  const { uploads, addFiles, dismiss, clearFinished } = useDocumentUploads({
-    workspaceId: workspace.id,
-    uploadedBy: user.name,
-    onUploaded: addDocument,
-  })
+  const { documents, status, error, reload, retry, remove } = useDocuments(workspace.id)
+  const { uploads, addFiles, dismiss, clearFinished } = useDocumentUploads({ workspaceId: workspace.id })
 
   const dropzoneRef = useRef(null)
   const [query, setQuery] = useState('')
@@ -61,7 +54,7 @@ export default function DocumentsPage() {
 
   const counts = useMemo(() => {
     const result = { all: documents.length, indexed: 0, processing: 0, failed: 0 }
-    for (const document of documents) result[statusBucket(document.status)] += 1
+    for (const document of documents) result[document.status] += 1
     return result
   }, [documents])
 
@@ -70,7 +63,7 @@ export default function DocumentsPage() {
     const needle = query.trim().toLowerCase()
     return documents.filter(
       (document) =>
-        (filter === 'all' || statusBucket(document.status) === filter) &&
+        (filter === 'all' || document.status === filter) &&
         (!needle || document.name.toLowerCase().includes(needle)),
     )
   }, [documents, filter, query])
@@ -82,7 +75,7 @@ export default function DocumentsPage() {
 
   function handleFiles(files) {
     const entries = addFiles(files)
-    const accepted = entries.filter((entry) => entry.status === 'uploading').length
+    const accepted = entries.filter((entry) => entry.status === 'queued').length
     if (accepted) {
       // New uploads appear at the top of the list, so show page 1.
       setPaging({ key: pagingKey, page: 1 })
@@ -155,7 +148,7 @@ export default function DocumentsPage() {
             </Button>
           }
         >
-          {error?.message}
+          {error}
         </Alert>
       )}
 

@@ -1,24 +1,19 @@
-import ProgressBar from '../ui/ProgressBar.jsx'
+import LoadingSpinner from '../ui/LoadingSpinner.jsx'
 import StatusBadge from '../ui/StatusBadge.jsx'
 import { STAGE_LABELS } from './ingestion.js'
 
-// Status badge plus, for in-flight documents, the current stage and progress.
+// Status badge plus, for processing documents, the current ingestion stage.
 export default function DocumentStatus({ document, showDetail = true }) {
-  const { status, stage, progress } = document
+  const { status, stage } = document
 
   return (
     <div className="min-w-0">
       <StatusBadge status={status} />
       {showDetail && status === 'processing' && (
-        <div className="mt-1.5 w-36">
-          <ProgressBar value={progress} tone="info" label={`${STAGE_LABELS[stage]} progress`} />
-          <p className="mt-1 truncate font-mono text-[10px] text-fg-subtle">
-            {STAGE_LABELS[stage]} · {progress}%
-          </p>
-        </div>
-      )}
-      {showDetail && status === 'queued' && (
-        <p className="mt-1 font-mono text-[10px] text-fg-subtle">Waiting to start</p>
+        <p className="mt-1.5 flex w-36 items-center gap-1.5 truncate font-mono text-[10px] text-fg-subtle">
+          <LoadingSpinner size="xs" className="text-sky-600" />
+          {STAGE_LABELS[stage] ?? 'Processing'}…
+        </p>
       )}
     </div>
   )
