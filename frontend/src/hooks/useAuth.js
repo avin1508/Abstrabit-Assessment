@@ -1,7 +1,6 @@
-import { mockSession } from '../data/mockAuth.js'
+import { useSelector } from 'react-redux'
 
-// Placeholder auth hook. Returns a mock session; will later read from an auth context
-// backed by the real API. Components should depend on this hook, not on the mock data.
+// Auth state from the Redux store: { user, token, isAuthenticated, loading, error, initialized }.
 export default function useAuth() {
-  return mockSession
+  return useSelector((state) => state.auth)
 }

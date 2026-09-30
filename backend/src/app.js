@@ -6,7 +6,7 @@ import authRoutes from './routes/auth.routes.js'
 
 const app = express()
 
-app.use(cors({ origin: env.clientUrl, credentials: true }))
+app.use(cors({ origin: env.clientUrls, credentials: true }))
 app.use(express.json({ limit: '1mb' }))
 
 app.get('/api/health', (req, res) => {

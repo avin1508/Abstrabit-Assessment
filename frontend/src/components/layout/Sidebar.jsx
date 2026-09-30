@@ -1,8 +1,10 @@
-import { Link, NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
 import { LogOut, X } from 'lucide-react'
 import { PATHS } from '../../routes/paths.js'
 import { NAV_SECTIONS } from '../../routes/navigation.js'
 import useAuth from '../../hooks/useAuth.js'
+import { logout } from '../../store/slices/authSlice.js'
 import { cn } from '../../utils/cn.js'
 import { focusRing } from '../../utils/styles.js'
 import Logo from '../common/Logo.jsx'
@@ -42,6 +44,14 @@ function NavItem({ item, onNavigate }) {
 
 export default function Sidebar({ open, onClose }) {
   const { user } = useAuth()
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
+
+  // Clears the token and user from Redux (and storage), then shows the sign-in screen.
+  function handleLogout() {
+    dispatch(logout())
+    navigate(PATHS.LOGIN, { replace: true })
+  }
 
   return (
     <aside
@@ -80,15 +90,15 @@ export default function Sidebar({ open, onClose }) {
           <span className="block truncate text-sm font-medium text-fg">{user.name}</span>
           <span className="block truncate text-xs text-fg-subtle">{user.email}</span>
         </span>
-        {/* Mock auth: signing out just returns to the sign-in screen. */}
-        <Link
-          to={PATHS.LOGIN}
+        <button
+          type="button"
+          onClick={handleLogout}
           aria-label="Sign out"
           title="Sign out"
           className={cn('rounded-md p-1.5 text-fg-subtle transition-colors hover:bg-surface hover:text-fg', focusRing)}
         >
           <LogOut className="size-4" aria-hidden />
-        </Link>
+        </button>
       </div>
     </aside>
   )

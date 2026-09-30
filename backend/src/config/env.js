@@ -21,7 +21,11 @@ export const pendingLaterVariables = LATER.filter((key) => !process.env[key]?.tr
 export const env = Object.freeze({
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port,
-  clientUrl: process.env.CLIENT_URL ?? 'http://localhost:5173',
+  // Allowed CORS origins; CLIENT_URL may list several, comma-separated.
+  clientUrls: (process.env.CLIENT_URL ?? 'http://localhost:5173')
+    .split(',')
+    .map((url) => url.trim())
+    .filter(Boolean),
   db: Object.freeze({
     username: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,

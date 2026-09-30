@@ -12,6 +12,7 @@ export default function Input({
   hint,
   error,
   required,
+  floatingMessage,
   size = 'md',
   leftIcon: LeftIcon,
   rightElement,
@@ -29,6 +30,7 @@ export default function Input({
       hint={hint}
       error={error}
       required={required}
+      floatingMessage={floatingMessage}
       className={className}
     >
       <div className="relative">

@@ -2,8 +2,8 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import useAuth from '../hooks/useAuth.js'
 import { PATHS } from './paths.js'
 
-// Guards authenticated routes. Auth is mocked for now (see hooks/useAuth.js);
-// only the hook needs to change when real auth lands.
+// Guards authenticated routes. App waits for session restore before rendering routes,
+// so this only ever sees a settled auth state.
 export default function ProtectedRoute() {
   const { isAuthenticated } = useAuth()
   const location = useLocation()
