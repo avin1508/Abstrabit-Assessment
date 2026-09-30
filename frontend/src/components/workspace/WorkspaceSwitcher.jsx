@@ -4,7 +4,6 @@ import useMenu from '../../hooks/useMenu.js'
 import useWorkspace from '../../hooks/useWorkspace.js'
 import { cn } from '../../utils/cn.js'
 import { focusRing } from '../../utils/styles.js'
-import LoadingSpinner from '../ui/LoadingSpinner.jsx'
 import Skeleton from '../ui/Skeleton.jsx'
 import CreateWorkspaceModal from './CreateWorkspaceModal.jsx'
 import WorkspaceAvatar from './WorkspaceAvatar.jsx'
@@ -13,7 +12,7 @@ function workspaceMeta(workspace) {
   return `${workspace.documentCount} ${workspace.documentCount === 1 ? 'document' : 'documents'}`
 }
 
-function SidebarTrigger({ workspace, busy, open, ...props }) {
+function SidebarTrigger({ workspace, open, ...props }) {
   return (
     <button
       type="button"
@@ -30,23 +29,16 @@ function SidebarTrigger({ workspace, busy, open, ...props }) {
           {workspace.name}
         </span>
         <span className="flex items-center gap-1.5 text-xs text-fg-subtle">
-          <span
-            className={cn('size-1.5 shrink-0 rounded-full', busy ? 'animate-pulse bg-sky-500' : 'bg-emerald-500')}
-            aria-hidden
-          />
-          <span className="truncate">{busy ? 'Switching…' : 'Active'}</span>
+          <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden />
+          <span className="truncate">Active</span>
         </span>
       </span>
-      {busy ? (
-        <LoadingSpinner size="xs" className="text-fg-subtle" />
-      ) : (
-        <ChevronsUpDown className="size-4 shrink-0 text-fg-subtle" aria-hidden />
-      )}
+      <ChevronsUpDown className="size-4 shrink-0 text-fg-subtle" aria-hidden />
     </button>
   )
 }
 
-function CompactTrigger({ workspace, busy, open, ...props }) {
+function CompactTrigger({ workspace, open, ...props }) {
   return (
     <button
       type="button"
@@ -61,11 +53,7 @@ function CompactTrigger({ workspace, busy, open, ...props }) {
       <span className="truncate text-sm font-semibold text-fg" title={workspace.name}>
         {workspace.name}
       </span>
-      {busy ? (
-        <LoadingSpinner size="xs" className="text-fg-subtle" />
-      ) : (
-        <ChevronDown className="size-4 shrink-0 text-fg-subtle" aria-hidden />
-      )}
+      <ChevronDown className="size-4 shrink-0 text-fg-subtle" aria-hidden />
     </button>
   )
 }
@@ -77,11 +65,11 @@ function CompactTrigger({ workspace, busy, open, ...props }) {
  * `onSwitch` fires after a new workspace is chosen (e.g. to close the mobile drawer).
  */
 export default function WorkspaceSwitcher({ variant = 'sidebar', onSwitch, className }) {
-  const { workspaces, activeWorkspace, status, switchingTo, switchWorkspace } = useWorkspace()
+  const { workspaces, activeWorkspace, switchWorkspace } = useWorkspace()
   const { open, rootRef, menuRef, triggerProps, onMenuKeyDown, closeAndFocusTrigger } = useMenu()
   const [createOpen, setCreateOpen] = useState(false)
 
-  if (status !== 'ready' || !activeWorkspace) {
+  if (!activeWorkspace) {
     return variant === 'sidebar' ? (
       <div className={cn('flex items-center gap-2.5 rounded-lg border border-line bg-surface p-2', className)}>
         <Skeleton className="size-8" />
@@ -113,8 +101,7 @@ export default function WorkspaceSwitcher({ variant = 'sidebar', onSwitch, class
   return (
     <div ref={rootRef} className={cn('relative', variant === 'sidebar' ? 'w-full' : 'min-w-0', className)}>
       <Trigger
-        workspace={switchingTo ?? activeWorkspace}
-        busy={Boolean(switchingTo)}
+        workspace={activeWorkspace}
         open={open}
         aria-label={`Active workspace: ${activeWorkspace.name}. Switch workspace`}
         {...triggerProps}
@@ -141,10 +128,9 @@ export default function WorkspaceSwitcher({ variant = 'sidebar', onSwitch, class
                   type="button"
                   role="menuitemradio"
                   aria-checked={active}
-                  disabled={Boolean(switchingTo)}
                   onClick={() => choose(workspace.id)}
                   className={cn(
-                    'relative flex w-full items-center gap-2.5 rounded-md py-2 pr-2.5 pl-2 text-left outline-none disabled:opacity-60',
+                    'relative flex w-full items-center gap-2.5 rounded-md py-2 pr-2.5 pl-2 text-left outline-none',
                     active
                       ? 'bg-brand-50/70 focus-visible:bg-brand-50'
                       : 'hover:bg-surface-muted focus-visible:bg-surface-muted',

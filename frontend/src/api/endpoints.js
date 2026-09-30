@@ -4,3 +4,8 @@ export const AUTH_ENDPOINTS = {
   LOGIN: '/auth/login',
   ME: '/auth/me',
 }
+
+export const WORKSPACE_ENDPOINTS = {
+  LIST: '/workspaces',
+  CREATE: '/workspaces',
+}

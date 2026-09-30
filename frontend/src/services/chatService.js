@@ -1,7 +1,7 @@
 import { MOCK_CONVERSATIONS } from '../data/mockConversations.js'
 import { MOCK_MESSAGES } from '../data/mockMessages.js'
 import { KNOWLEDGE } from '../data/mockAnswers.js'
-import { MOCK_WORKSPACES } from '../data/mockWorkspaces.js'
+import { store } from '../store/index.js'
 import { plainText } from '../utils/chatText.js'
 import { getWorkspaceDocumentsSync } from './documentService.js'
 import { createToolRun, executeToolRun, getToolRunSync, onToolRunFinished, resumeInFlightRuns } from './toolService.js'
@@ -39,8 +39,9 @@ const conversations = MOCK_CONVERSATIONS.map((conversation) => {
 
 // ------------------------------------------------------------------ helpers
 
+// Real workspaces come from the Redux store; this mock chat service only needs the name.
 function getWorkspace(workspaceId) {
-  const workspace = MOCK_WORKSPACES.find((candidate) => candidate.id === workspaceId)
+  const workspace = store.getState().workspace.workspaces.find((candidate) => candidate.id === workspaceId)
   if (!workspace) throw new Error('Workspace not found.')
   return workspace
 }
