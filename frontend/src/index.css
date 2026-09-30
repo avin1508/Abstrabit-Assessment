@@ -1,0 +1,95 @@
+@import 'tailwindcss';
+
+/*
+ * Abstrabit design tokens.
+ * Semantic colors (canvas, surface, line, fg) are what components should use;
+ * the brand scale is for primary actions, focus and active states only.
+ */
+@theme {
+  --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --color-canvas: #f7f7f9;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f3f3f6;
+  --color-line: #e7e7ec;
+  --color-line-strong: #d5d5dd;
+  --color-fg: #0f0f14;
+  --color-fg-muted: #4f4f5c;
+  --color-fg-subtle: #8a8a96;
+
+  --color-brand-50: #f3f3ff;
+  --color-brand-100: #e9e8ff;
+  --color-brand-200: #d5d3fe;
+  --color-brand-300: #b5b1fc;
+  --color-brand-400: #8f88f8;
+  --color-brand-500: #6e64f1;
+  --color-brand-600: #5b4ce5;
+  --color-brand-700: #4c3dca;
+  --color-brand-800: #3f34a3;
+  --color-brand-900: #363181;
+  --color-brand-950: #211d4b;
+
+  --shadow-overlay: 0 16px 40px -12px rgb(15 15 20 / 0.2), 0 2px 6px -1px rgb(15 15 20 / 0.06);
+
+  --animate-fade-in: fade-in 150ms ease-out;
+  --animate-scale-in: scale-in 140ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  --animate-slide-in: slide-in 220ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  --animate-slide-in-right: slide-in-right 240ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  --animate-slide-in-left: slide-in-left 240ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  --animate-slide-in-up: slide-in-up 260ms cubic-bezier(0.2, 0.9, 0.3, 1);
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes scale-in {
+    from { opacity: 0; transform: scale(0.97) translateY(-2px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @keyframes slide-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slide-in-right {
+    from { transform: translateX(24px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes slide-in-up {
+    from { transform: translateY(32px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes slide-in-left {
+    from { transform: translateX(-24px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+}
+
+/* Subtle dot grid used behind auth screens and empty states. */
+@utility bg-grid {
+  background-image: radial-gradient(circle at 1px 1px, var(--color-line-strong) 1px, transparent 0);
+  background-size: 20px 20px;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-fg antialiased;
+    font-feature-settings: 'ss01', 'cv11';
+  }
+
+  /* Edge's built-in reveal/clear buttons duplicate PasswordInput's own toggle. */
+  input::-ms-reveal,
+  input::-ms-clear {
+    display: none;
+  }
+
+  ::selection {
+    @apply bg-brand-100 text-brand-900;
+  }
+}
