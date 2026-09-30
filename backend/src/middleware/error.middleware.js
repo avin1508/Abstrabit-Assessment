@@ -1,5 +1,13 @@
+import multer from 'multer'
 import { ZodError } from 'zod'
 import { logger } from '../utils/logger.js'
+
+// Multer error codes -> client-safe responses. Multer deletes any partially written file itself.
+const MULTER_ERRORS = {
+  LIMIT_FILE_SIZE: [413, 'File is too large. The maximum size is 20 MB.'],
+  LIMIT_FILE_COUNT: [400, 'Upload one file at a time.'],
+  LIMIT_UNEXPECTED_FILE: [400, 'Send the file in the "file" field, one file at a time.'],
+}
 
 export function notFound(req, res) {
   res.status(404).json({ success: false, message: `Route not found: ${req.method} ${req.originalUrl}` })
@@ -14,6 +22,11 @@ export function errorHandler(err, req, res, next) {
       message: 'Validation failed',
       errors: err.issues.map((issue) => ({ field: issue.path.join('.'), message: issue.message })),
     })
+  }
+
+  if (err instanceof multer.MulterError) {
+    const [status, message] = MULTER_ERRORS[err.code] ?? [400, 'Invalid upload.']
+    return res.status(status).json({ success: false, message })
   }
 
   // Unique index violation (e.g. two registrations with the same email at once).
