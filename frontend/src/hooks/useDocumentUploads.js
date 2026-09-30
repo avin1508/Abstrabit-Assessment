@@ -10,14 +10,20 @@ const CLEAR_DONE_AFTER_MS = 4000
  * Each entry: { id, name, size, type, status: queued | uploading | done | rejected | error, progress, error }
  * Invalid files are rejected immediately. Valid ones upload one at a time through
  * documentSlice.uploadDocument; the uploading entry shows the real progress from Redux.
+ * onUploaded(document) runs after each successful upload.
  */
-export default function useDocumentUploads({ workspaceId }) {
+export default function useDocumentUploads({ workspaceId, onUploaded }) {
   const dispatch = useDispatch()
   const uploadProgress = useSelector((state) => state.document.uploadProgress)
   const [uploads, setUploads] = useState([])
   const nextId = useRef(0)
   const queue = useRef([])
   const running = useRef(false)
+  // Latest callback, so an upload loop started earlier never calls an outdated one.
+  const onUploadedRef = useRef(onUploaded)
+  useEffect(() => {
+    onUploadedRef.current = onUploaded
+  })
 
   // Files still waiting when the page unmounts (e.g. workspace switch) are not uploaded.
   useEffect(() => () => (queue.current = []), [])
@@ -38,8 +44,9 @@ export default function useDocumentUploads({ workspaceId }) {
       update(id, { status: 'uploading' })
       try {
         // workspaceId is fixed when the file is added, so a later switch can't redirect it.
-        await dispatch(uploadDocument({ workspaceId, file })).unwrap()
+        const document = await dispatch(uploadDocument({ workspaceId, file })).unwrap()
         update(id, { status: 'done' })
+        onUploadedRef.current?.(document)
         setTimeout(() => dismiss(id), CLEAR_DONE_AFTER_MS)
       } catch (error) {
         update(id, { status: 'error', error: error.message })

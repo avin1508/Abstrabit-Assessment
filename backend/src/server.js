@@ -2,7 +2,7 @@ import { env, pendingLaterVariables } from './config/env.js'
 import { connectDB, disconnectDB } from './config/db.js'
 import { verifyRedisConnection } from './config/redis.js'
 import { closeIngestionQueue, getIngestionQueue } from './queues/ingestion.queue.js'
-import { startIngestionWorker, stopIngestionWorker } from './queues/ingestion.worker.js'
+import { requeuePendingDocuments, startIngestionWorker, stopIngestionWorker } from './queues/ingestion.worker.js'
 import { logger } from './utils/logger.js'
 import app from './app.js'
 
@@ -18,6 +18,7 @@ async function start() {
   await verifyRedisConnection()
   getIngestionQueue()
   startIngestionWorker()
+  await requeuePendingDocuments().catch((error) => logger.error('[ingestion] re-queue on startup failed:', error.message))
 
   const server = app.listen(env.port, () => logger.info(`Server listening on port ${env.port}`))
 

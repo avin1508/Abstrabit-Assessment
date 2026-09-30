@@ -1,9 +1,12 @@
 import { unlink } from 'node:fs/promises'
 import { resolveStoragePath, toStoragePath } from '../config/storage.js'
 import { Document, DocumentChunk } from '../models/index.js'
+import { enqueueIngestion } from '../queues/ingestion.queue.js'
 import { hashFile } from '../utils/fileHash.js'
 import { HttpError } from '../utils/httpError.js'
 import { logger } from '../utils/logger.js'
+
+const QUEUE_UNAVAILABLE = 'Processing couldn’t be started. Retry in a moment.'
 
 // Safe document data for the client: no storagePath or contentHash.
 export function toDocumentResponse(document) {
@@ -15,6 +18,7 @@ export function toDocumentResponse(document) {
     fileSize: document.fileSize,
     status: document.status,
     processingStage: document.processingStage,
+    progress: document.progress,
     errorMessage: document.errorMessage,
     createdAt: document.createdAt,
     updatedAt: document.updatedAt,
@@ -36,6 +40,10 @@ function cleanOriginalName(name) {
   return base.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 255) || 'document'
 }
 
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 // Only documents in this (already ownership-verified) workspace.
 async function findWorkspaceDocument(workspaceId, documentId) {
   const document = await Document.findOne({ _id: documentId, workspaceId })
@@ -43,9 +51,23 @@ async function findWorkspaceDocument(workspaceId, documentId) {
   return document
 }
 
-// Records an uploaded file. Ingestion (extraction, chunking, embedding) happens later, in Module 4.
+// Queues ingestion. If Redis is unavailable the document is marked failed (so it can be
+// retried) instead of sitting in "processing" forever.
+async function queueIngestion(document) {
+  try {
+    await enqueueIngestion(document._id)
+  } catch (error) {
+    logger.error(`Couldn't queue ingestion for document ${document._id}: ${error.message}`)
+    document.status = 'failed'
+    document.errorMessage = QUEUE_UNAVAILABLE
+    await document.save()
+  }
+}
+
+// Stores the upload and queues background ingestion. Nothing heavy runs in the request.
 export async function createDocument({ workspaceId, userId, file }) {
   const storagePath = toStoragePath(file.filename)
+  let document
   try {
     const contentHash = await hashFile(file.path)
 
@@ -55,7 +77,7 @@ export async function createDocument({ workspaceId, userId, file }) {
       throw new HttpError(409, 'This file has already been uploaded to this workspace')
     }
 
-    const document = await Document.create({
+    document = await Document.create({
       workspaceId,
       uploadedBy: userId,
       originalName: cleanOriginalName(file.originalname),
@@ -65,29 +87,69 @@ export async function createDocument({ workspaceId, userId, file }) {
       storagePath,
       status: 'processing',
       processingStage: 'extracting',
+      progress: 0,
     })
-    return toDocumentResponse(document)
   } catch (error) {
     // Don't leave an orphaned file behind when the record wasn't created.
     await removeStoredFile(storagePath)
     throw error
   }
+
+  await queueIngestion(document)
+  return toDocumentResponse(document)
 }
 
-export async function listDocuments(workspaceId) {
-  const documents = await Document.find({ workspaceId }).sort({ createdAt: -1 })
-  return documents.map(toDocumentResponse)
+// One page of the workspace's documents (newest first), optionally filtered by status and
+// by a case-insensitive name search. Counts per status cover the whole workspace.
+export async function listDocuments(workspaceId, { page, limit, status, search }) {
+  const filter = { workspaceId }
+  if (status) filter.status = status
+  if (search) filter.originalName = { $regex: escapeRegex(search), $options: 'i' }
+
+  const [documents, total, grouped] = await Promise.all([
+    Document.find(filter)
+      .sort({ createdAt: -1, _id: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit),
+    Document.countDocuments(filter),
+    Document.aggregate([{ $match: { workspaceId } }, { $group: { _id: '$status', count: { $sum: 1 } } }]),
+  ])
+
+  const statusCounts = { all: 0, processing: 0, indexed: 0, failed: 0 }
+  for (const { _id, count } of grouped) {
+    statusCounts[_id] = count
+    statusCounts.all += count
+  }
+
+  return {
+    documents: documents.map(toDocumentResponse),
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    statusCounts,
+  }
+}
+
+export async function getDocumentStatus(workspaceId, documentId) {
+  const document = await Document.findOne({ _id: documentId, workspaceId })
+    .select('status processingStage progress errorMessage')
+    .lean()
+  if (!document) throw new HttpError(404, 'Document not found')
+  return {
+    id: document._id.toString(),
+    status: document.status,
+    processingStage: document.processingStage,
+    progress: document.progress,
+    errorMessage: document.errorMessage,
+  }
 }
 
 export async function deleteDocument(workspaceId, documentId) {
   const document = await findWorkspaceDocument(workspaceId, documentId)
-  // Chunks don't exist until ingestion (Module 4), but they must never outlive their document.
   await DocumentChunk.deleteMany({ documentId: document._id, workspaceId })
   await document.deleteOne()
   await removeStoredFile(document.storagePath)
 }
 
-// Resets a failed document so ingestion can run again. Queueing the job is added in Module 4.
+// Resets a failed document and queues ingestion again.
 export async function retryDocument(workspaceId, documentId) {
   const document = await findWorkspaceDocument(workspaceId, documentId)
   if (document.status !== 'failed') {
@@ -96,7 +158,10 @@ export async function retryDocument(workspaceId, documentId) {
 
   document.status = 'processing'
   document.processingStage = 'extracting'
+  document.progress = 0
   document.errorMessage = null
   await document.save()
+
+  await queueIngestion(document)
   return toDocumentResponse(document)
 }

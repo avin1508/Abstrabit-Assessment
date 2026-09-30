@@ -117,7 +117,7 @@ export default function AppLayout() {
 
   // Documents belong to the active workspace: reload them whenever it changes.
   useEffect(() => {
-    if (loaded && activeWorkspaceId) dispatch(fetchDocuments(activeWorkspaceId))
+    if (loaded && activeWorkspaceId) dispatch(fetchDocuments({ workspaceId: activeWorkspaceId }))
   }, [loaded, activeWorkspaceId, dispatch])
   const { pathname } = useLocation()
   const fullBleed = Boolean(findNavItem(pathname)?.fullBleed)

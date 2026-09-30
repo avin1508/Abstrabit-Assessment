@@ -11,10 +11,20 @@ function extensionOf(name) {
 }
 
 /*
- * Backend document -> the shape the Documents UI reads.
- * processingStage is the current stage while processing and the stage that failed when failed.
- * Chunk counts don't exist until ingestion (Module 4).
+ * Processing state as the UI reads it. processingStage is the current stage while
+ * processing and the stage that failed when failed; progress (0–100) comes from the worker.
  */
+export function toProcessingState({ status, processingStage, progress, errorMessage }) {
+  return {
+    status,
+    stage: status === 'processing' ? processingStage : null,
+    failedStage: status === 'failed' ? processingStage : null,
+    progress: progress ?? 0,
+    error: errorMessage,
+  }
+}
+
+// Backend document -> the shape the Documents UI reads. Chunk counts aren't returned by the API.
 function toDocument(document) {
   return {
     id: document.id,
@@ -23,19 +33,29 @@ function toDocument(document) {
     type: extensionOf(document.originalName),
     mimeType: document.mimeType,
     sizeBytes: document.fileSize,
-    status: document.status,
-    stage: document.status === 'processing' ? document.processingStage : null,
-    failedStage: document.status === 'failed' ? document.processingStage : null,
-    error: document.errorMessage,
+    ...toProcessingState(document),
     chunkCount: null,
     uploadedAt: document.createdAt,
     updatedAt: document.updatedAt,
   }
 }
 
-export async function listDocumentsRequest(workspaceId) {
-  const response = await api.get(DOCUMENT_ENDPOINTS.LIST, inWorkspace(workspaceId))
-  return response.data.data.documents.map(toDocument)
+// One page of documents. status 'all' and an empty search mean "no filter".
+export async function listDocumentsRequest(workspaceId, { page, limit, status, search }) {
+  const params = { page, limit }
+  if (status && status !== 'all') params.status = status
+  if (search) params.search = search
+
+  const response = await api.get(DOCUMENT_ENDPOINTS.LIST, { ...inWorkspace(workspaceId), params })
+  const { documents, pagination, statusCounts } = response.data.data
+  return { documents: documents.map(toDocument), pagination, statusCounts }
+}
+
+// Lightweight processing state for one document: { id, status, stage, failedStage, progress, error }.
+export async function getDocumentStatusRequest(workspaceId, documentId) {
+  const response = await api.get(DOCUMENT_ENDPOINTS.STATUS(documentId), inWorkspace(workspaceId))
+  const { status } = response.data.data
+  return { id: status.id, ...toProcessingState(status) }
 }
 
 // onProgress receives 0–100 from the browser's real upload progress events.

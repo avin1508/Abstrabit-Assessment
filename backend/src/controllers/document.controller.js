@@ -1,5 +1,5 @@
 import * as documentService from '../services/document.service.js'
-import { documentParamsSchema } from '../validators/document.validator.js'
+import { documentParamsSchema, listDocumentsQuerySchema } from '../validators/document.validator.js'
 
 // req.workspace is set by requireWorkspace (ownership already verified).
 
@@ -13,8 +13,15 @@ export async function uploadDocument(req, res) {
 }
 
 export async function listDocuments(req, res) {
-  const documents = await documentService.listDocuments(req.workspace._id)
-  res.json({ success: true, data: { documents } })
+  const query = listDocumentsQuerySchema.parse(req.query)
+  const data = await documentService.listDocuments(req.workspace._id, query)
+  res.json({ success: true, data })
+}
+
+export async function getDocumentStatus(req, res) {
+  const { id } = documentParamsSchema.parse(req.params)
+  const status = await documentService.getDocumentStatus(req.workspace._id, id)
+  res.json({ success: true, data: { status } })
 }
 
 export async function deleteDocument(req, res) {

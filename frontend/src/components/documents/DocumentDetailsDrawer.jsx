@@ -5,7 +5,7 @@ import FileIcon from '../common/FileIcon.jsx'
 import Alert from '../ui/Alert.jsx'
 import Button from '../ui/Button.jsx'
 import Drawer from '../ui/Drawer.jsx'
-import LoadingSpinner from '../ui/LoadingSpinner.jsx'
+import ProgressBar from '../ui/ProgressBar.jsx'
 import StatusBadge from '../ui/StatusBadge.jsx'
 import IngestionTimeline from './IngestionTimeline.jsx'
 import { STAGE_LABELS } from './ingestion.js'
@@ -30,10 +30,11 @@ function StatusSummary({ document, workspace, writable, onRetry }) {
     case 'processing':
       return (
         <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-3.5">
-          <p className="flex items-center gap-2 text-sm font-medium text-fg">
-            <LoadingSpinner size="xs" className="text-sky-600" />
-            {STAGE_LABELS[document.stage] ?? 'Processing'}…
-          </p>
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <p className="font-medium text-fg">{STAGE_LABELS[document.stage] ?? 'Processing'}…</p>
+            <span className="font-mono text-xs text-sky-700 tabular-nums">{document.progress}%</span>
+          </div>
+          <ProgressBar value={document.progress} tone="info" label="Ingestion progress" className="mt-2" />
           <p className="mt-2 text-xs text-fg-muted">Answers won’t cite this document until indexing finishes.</p>
         </div>
       )
