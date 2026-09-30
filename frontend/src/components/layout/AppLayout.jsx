@@ -1,12 +1,15 @@
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import { ChevronRight, Menu, RefreshCw, TriangleAlert } from 'lucide-react'
+import { useDispatch } from 'react-redux'
+import { ChevronRight, FolderPlus, Menu, RefreshCw, TriangleAlert } from 'lucide-react'
 import useWorkspace from '../../hooks/useWorkspace.js'
+import { fetchWorkspaces } from '../../store/slices/workspaceSlice.js'
 import { findNavItem } from '../../routes/navigation.js'
 import Button from '../ui/Button.jsx'
 import EmptyState from '../ui/EmptyState.jsx'
 import IconButton from '../ui/IconButton.jsx'
 import LoadingSpinner from '../ui/LoadingSpinner.jsx'
+import CreateWorkspaceModal from '../workspace/CreateWorkspaceModal.jsx'
 import WorkspaceAvatar from '../workspace/WorkspaceAvatar.jsx'
 import WorkspaceSwitcher from '../workspace/WorkspaceSwitcher.jsx'
 import Sidebar from './Sidebar.jsx'
@@ -38,15 +41,16 @@ function Breadcrumb() {
 }
 
 function MainContent() {
-  const { activeWorkspace, status, switchingTo, reload } = useWorkspace()
+  const { activeWorkspace, loaded, error, reload } = useWorkspace()
+  const [createOpen, setCreateOpen] = useState(false)
 
-  if (status === 'error') {
+  if (!loaded && error) {
     return (
       <EmptyState
         bordered
         icon={TriangleAlert}
         title="Couldn’t load your workspaces"
-        description="Check your connection and try again."
+        description={error}
         action={
           <Button leftIcon={RefreshCw} onClick={reload}>
             Retry
@@ -56,12 +60,32 @@ function MainContent() {
     )
   }
 
-  if (status === 'loading' || switchingTo) {
+  if (!loaded) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-24 text-sm text-fg-muted" role="status">
         <LoadingSpinner size="md" className="text-brand-600" />
-        {switchingTo ? `Switching to ${switchingTo.name}…` : 'Loading workspace…'}
+        Loading workspace…
       </div>
+    )
+  }
+
+  // Registration creates a first workspace, so this only shows if the user has none.
+  if (!activeWorkspace) {
+    return (
+      <>
+        <EmptyState
+          bordered
+          icon={FolderPlus}
+          title="Create your first workspace"
+          description="Documents, chats, tasks and tool activity all live inside a workspace."
+          action={
+            <Button variant="primary" onClick={() => setCreateOpen(true)}>
+              Create workspace
+            </Button>
+          }
+        />
+        {createOpen && <CreateWorkspaceModal open onClose={() => setCreateOpen(false)} />}
+      </>
     )
   }
 
@@ -81,7 +105,14 @@ function MainContent() {
 
 // Authenticated app shell: sidebar + top bar + routed content.
 export default function AppLayout() {
+  const dispatch = useDispatch()
+  const { loaded, error } = useWorkspace()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Load the signed-in user's workspaces once the protected app mounts (and after a sign-in).
+  useEffect(() => {
+    if (!loaded && !error) dispatch(fetchWorkspaces())
+  }, [loaded, error, dispatch])
   const { pathname } = useLocation()
   const fullBleed = Boolean(findNavItem(pathname)?.fullBleed)
 

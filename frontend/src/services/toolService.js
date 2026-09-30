@@ -1,5 +1,5 @@
 import { MOCK_TOOL_RUNS } from '../data/mockToolRuns.js'
-import { MOCK_WORKSPACES } from '../data/mockWorkspaces.js'
+import { store } from '../store/index.js'
 import { createTaskSync } from './taskService.js'
 
 /*
@@ -70,7 +70,7 @@ export function createToolRun({ workspaceId, conversationId, tool, args, trigger
 export function executeToolRun(runId) {
   const run = runs.find((candidate) => candidate.id === runId)
   if (!run || (run.status !== 'running' && run.status !== 'pending')) return clone(run)
-  const workspace = MOCK_WORKSPACES.find((candidate) => candidate.id === run.workspaceId)
+  const workspace = store.getState().workspace.workspaces.find((candidate) => candidate.id === run.workspaceId)
   const durationMs = 180 + Math.round(Math.random() * 520)
 
   if (workspace?.role === 'Viewer') {
