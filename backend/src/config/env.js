@@ -1,10 +1,10 @@
 import 'dotenv/config'
 
-// Required for the server to boot (database + queue).
-const REQUIRED = ['DB_USERNAME', 'DB_PASSWORD', 'DB_CLUSTER_URL', 'DB_NAME', 'REDIS_URL']
+// Required for the server to boot (database, queue, auth).
+const REQUIRED = ['DB_USERNAME', 'DB_PASSWORD', 'DB_CLUSTER_URL', 'DB_NAME', 'REDIS_URL', 'JWT_SECRET']
 
-// Needed by later modules (auth, AI, Discord). Allowed to be empty in Module 0.
-const LATER = ['JWT_SECRET', 'GEMINI_API_KEY', 'DISCORD_WEBHOOK_URL']
+// Needed by later modules (AI, Discord). Allowed to be empty for now.
+const LATER = ['GEMINI_API_KEY', 'DISCORD_WEBHOOK_URL']
 
 const missing = REQUIRED.filter((key) => !process.env[key]?.trim())
 if (missing.length) {
@@ -21,7 +21,11 @@ export const pendingLaterVariables = LATER.filter((key) => !process.env[key]?.tr
 export const env = Object.freeze({
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port,
-  clientUrl: process.env.CLIENT_URL ?? 'http://localhost:5173',
+  // Allowed CORS origins; CLIENT_URL may list several, comma-separated.
+  clientUrls: (process.env.CLIENT_URL ?? 'http://localhost:5173')
+    .split(',')
+    .map((url) => url.trim())
+    .filter(Boolean),
   db: Object.freeze({
     username: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
@@ -29,7 +33,7 @@ export const env = Object.freeze({
     name: process.env.DB_NAME,
   }),
   redisUrl: process.env.REDIS_URL,
-  jwtSecret: process.env.JWT_SECRET ?? '',
+  jwtSecret: process.env.JWT_SECRET,
   geminiApiKey: process.env.GEMINI_API_KEY ?? '',
   discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL ?? '',
 })

@@ -15,3 +15,11 @@ export function writeStorage(key, value) {
     // Persistence is a convenience; ignore failures.
   }
 }
+
+export function removeStorage(key) {
+  try {
+    window.localStorage.removeItem(key)
+  } catch {
+    // Ignore; nothing to clean up.
+  }
+}

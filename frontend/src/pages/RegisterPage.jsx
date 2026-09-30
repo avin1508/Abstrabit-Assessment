@@ -1,24 +1,30 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
 import { PATHS } from '../routes/paths.js'
-import { register as registerAccount } from '../services/authService.js'
-import { validateRegister } from '../utils/validation.js'
+import { register as registerAccount } from '../store/slices/authSlice.js'
+import { PASSWORD_MIN_LENGTH, validateRegister } from '../utils/validation.js'
 import useForm from '../hooks/useForm.js'
 import useToast from '../hooks/useToast.js'
 import AuthFormHeader from '../components/auth/AuthFormHeader.jsx'
-import PasswordStrengthMeter from '../components/auth/PasswordStrengthMeter.jsx'
-import { Alert, Button, Input, PasswordInput } from '../components/ui/index.js'
+import { Button, Input, PasswordInput } from '../components/ui/index.js'
 
 export default function RegisterPage() {
-  const navigate = useNavigate()
+  const dispatch = useDispatch()
   const { toast } = useToast()
 
+  // confirmPassword is checked client-side only; the backend receives name, email and password.
+  // On success AuthLayout redirects into the app.
   const form = useForm({
     initialValues: { name: '', email: '', password: '', confirmPassword: '' },
     validate: validateRegister,
-    onSubmit: async (values) => {
-      const { user } = await registerAccount(values)
-      toast({ tone: 'success', title: 'Account created', description: `Signed in as ${user.email}.` })
-      navigate(PATHS.DASHBOARD, { replace: true })
+    // Errors are shown as a toast so nothing above the form appears and shifts the layout.
+    onSubmit: async ({ name, email, password }) => {
+      try {
+        const { user } = await dispatch(registerAccount({ name, email, password })).unwrap()
+        toast({ tone: 'success', title: 'Account created', description: `Signed in as ${user.email}.` })
+      } catch (error) {
+        toast({ tone: 'danger', title: 'Couldn’t create your account', description: error.message })
+      }
     },
   })
 
@@ -28,41 +34,43 @@ export default function RegisterPage() {
     <>
       <AuthFormHeader title="Create your account" description="Start organizing documents into isolated workspaces." />
 
-      <form onSubmit={form.handleSubmit} noValidate className="space-y-5">
-        {form.submitError && (
-          <Alert tone="danger" title="Couldn’t create your account">
-            {form.submitError}
-          </Alert>
-        )}
-
-        <Input label="Full name" autoComplete="name" placeholder="Ada Lovelace" size="lg" autoFocus {...form.register('name')} />
+      <form onSubmit={form.handleSubmit} noValidate className="space-y-6">
+        <Input
+          label="Full name"
+          autoComplete="name"
+          placeholder="Ada Lovelace"
+          size="lg"
+          floatingMessage
+          autoFocus
+          {...form.register('name')}
+        />
 
         <Input
-          label="Work email"
+          label="Email"
           type="email"
           autoComplete="email"
           placeholder="you@company.com"
           size="lg"
+          floatingMessage
           {...form.register('email')}
         />
 
-        <div>
-          <PasswordInput
-            label="Password"
-            autoComplete="new-password"
-            placeholder="Create a password"
-            size="lg"
-            aria-describedby="password-strength"
-            {...form.register('password')}
-          />
-          <PasswordStrengthMeter id="password-strength" password={form.values.password} />
-        </div>
+        <PasswordInput
+          label="Password"
+          autoComplete="new-password"
+          placeholder="Create a password"
+          size="lg"
+          floatingMessage
+          hint={`At least ${PASSWORD_MIN_LENGTH} characters.`}
+          {...form.register('password')}
+        />
 
         <PasswordInput
           label="Confirm password"
           autoComplete="new-password"
           placeholder="Re-enter your password"
           size="lg"
+          floatingMessage
           hint={passwordsMatch ? '✓ Passwords match' : undefined}
           {...form.register('confirmPassword')}
         />

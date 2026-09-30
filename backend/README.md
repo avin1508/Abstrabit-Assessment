@@ -18,7 +18,7 @@ cp .env.example .env   # then fill in the values
 ```
 
 Required to start: `DB_USERNAME`, `DB_PASSWORD`, `DB_CLUSTER_URL`, `DB_NAME`, `REDIS_URL`.
-`JWT_SECRET`, `GEMINI_API_KEY` and `DISCORD_WEBHOOK_URL` are used by later modules.
+Also required: `JWT_SECRET`. `GEMINI_API_KEY` and `DISCORD_WEBHOOK_URL` are used by later modules.
 Never commit `.env`.
 
 ## Run
