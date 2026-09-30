@@ -3,7 +3,6 @@ import { MOCK_MESSAGES } from '../data/mockMessages.js'
 import { KNOWLEDGE } from '../data/mockAnswers.js'
 import { store } from '../store/index.js'
 import { plainText } from '../utils/chatText.js'
-import { getWorkspaceDocumentsSync } from './documentService.js'
 import { createToolRun, executeToolRun, getToolRunSync, onToolRunFinished, resumeInFlightRuns } from './toolService.js'
 import { inDays } from '../data/mockTime.js'
 
@@ -38,6 +37,12 @@ const conversations = MOCK_CONVERSATIONS.map((conversation) => {
 })
 
 // ------------------------------------------------------------------ helpers
+// Real documents of the active workspace, as loaded into documentSlice.
+function getWorkspaceDocuments(workspaceId) {
+  const { documents, workspaceId: loadedFor } = store.getState().document
+  return loadedFor === workspaceId ? documents : []
+}
+
 
 // Real workspaces come from the Redux store; this mock chat service only needs the name.
 function getWorkspace(workspaceId) {
@@ -155,7 +160,7 @@ function resolveIntent(workspace, conversation, text) {
     }
   }
 
-  const indexed = getWorkspaceDocumentsSync(workspace.id).filter((document) => document.status === 'indexed')
+  const indexed = getWorkspaceDocuments(workspace.id).filter((document) => document.status === 'indexed')
   const unknown = {
     type: 'unknown',
     searched: indexed.length,
@@ -297,7 +302,7 @@ export function getConversationSummariesSync(workspaceId) {
 // What the assistant can draw on in this workspace.
 export async function getAssistantContext(workspaceId) {
   await delay(200)
-  const indexedDocuments = getWorkspaceDocumentsSync(workspaceId).filter((document) => document.status === 'indexed').length
+  const indexedDocuments = getWorkspaceDocuments(workspaceId).filter((document) => document.status === 'indexed').length
   return { indexedDocuments }
 }
 

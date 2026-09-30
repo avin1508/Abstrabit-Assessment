@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { ChevronRight, FolderPlus, Menu, RefreshCw, TriangleAlert } from 'lucide-react'
 import useWorkspace from '../../hooks/useWorkspace.js'
+import { fetchDocuments } from '../../store/slices/documentSlice.js'
 import { fetchWorkspaces } from '../../store/slices/workspaceSlice.js'
 import { findNavItem } from '../../routes/navigation.js'
 import Button from '../ui/Button.jsx'
@@ -106,13 +107,18 @@ function MainContent() {
 // Authenticated app shell: sidebar + top bar + routed content.
 export default function AppLayout() {
   const dispatch = useDispatch()
-  const { loaded, error } = useWorkspace()
+  const { loaded, error, activeWorkspaceId } = useWorkspace()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Load the signed-in user's workspaces once the protected app mounts (and after a sign-in).
   useEffect(() => {
     if (!loaded && !error) dispatch(fetchWorkspaces())
   }, [loaded, error, dispatch])
+
+  // Documents belong to the active workspace: reload them whenever it changes.
+  useEffect(() => {
+    if (loaded && activeWorkspaceId) dispatch(fetchDocuments({ workspaceId: activeWorkspaceId }))
+  }, [loaded, activeWorkspaceId, dispatch])
   const { pathname } = useLocation()
   const fullBleed = Boolean(findNavItem(pathname)?.fullBleed)
 

@@ -9,3 +9,11 @@ export const WORKSPACE_ENDPOINTS = {
   LIST: '/workspaces',
   CREATE: '/workspaces',
 }
+
+export const DOCUMENT_ENDPOINTS = {
+  LIST: '/documents',
+  UPLOAD: '/documents',
+  STATUS: (id) => `/documents/${id}/status`,
+  DELETE: (id) => `/documents/${id}`,
+  RETRY: (id) => `/documents/${id}/retry`,
+}

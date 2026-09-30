@@ -63,6 +63,14 @@ const documentSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+
+    // Ingestion progress (0–100), written by the ingestion worker.
+    progress: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 0,
+    },
   },
   {
     timestamps: true,

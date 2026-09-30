@@ -15,6 +15,7 @@ function UploadItem({ upload, onDismiss }) {
           <p className="truncate text-sm font-medium text-fg">{upload.name}</p>
           <span className="shrink-0 font-mono text-[11px] text-fg-subtle">{formatBytes(upload.size)}</span>
         </div>
+        {upload.status === 'queued' && <p className="mt-0.5 text-xs text-fg-subtle">Waiting to upload…</p>}
         {upload.status === 'uploading' && (
           <div className="mt-1.5 flex items-center gap-2">
             <ProgressBar value={upload.progress} label={`Uploading ${upload.name}`} />
@@ -26,7 +27,7 @@ function UploadItem({ upload, onDismiss }) {
         {upload.status === 'done' && (
           <p className="mt-0.5 flex items-center gap-1 text-xs text-emerald-700">
             <CircleCheck className="size-3.5" aria-hidden />
-            Uploaded — indexing started
+            Uploaded — processing started
           </p>
         )}
         {failed && (
@@ -36,7 +37,7 @@ function UploadItem({ upload, onDismiss }) {
           </p>
         )}
       </div>
-      {upload.status !== 'uploading' && (
+      {upload.status !== 'uploading' && upload.status !== 'queued' && (
         <button
           type="button"
           onClick={onDismiss}
@@ -52,7 +53,7 @@ function UploadItem({ upload, onDismiss }) {
 
 export default function UploadQueue({ uploads, onDismiss, onClearFinished }) {
   if (uploads.length === 0) return null
-  const active = uploads.filter((upload) => upload.status === 'uploading').length
+  const active = uploads.filter((upload) => upload.status === 'uploading' || upload.status === 'queued').length
 
   return (
     <Card className="overflow-hidden">

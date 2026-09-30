@@ -1,57 +1,81 @@
-import { useRef, useState } from 'react'
-import { uploadDocument } from '../services/documentService.js'
+import { useEffect, useRef, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import { uploadDocument } from '../store/slices/documentSlice.js'
 import { getFileExtension, validateUploadFile } from '../utils/fileValidation.js'
 
 const CLEAR_DONE_AFTER_MS = 4000
 
 /*
- * Client-side upload queue.
- * Each entry: { id, name, size, type, status: uploading | done | rejected | error, progress, error }
- * Invalid files are rejected immediately; valid ones upload in parallel and call onUploaded(document).
+ * The visible upload list for the Documents page (UI state only).
+ * Each entry: { id, name, size, type, status: queued | uploading | done | rejected | error, progress, error }
+ * Invalid files are rejected immediately. Valid ones upload one at a time through
+ * documentSlice.uploadDocument; the uploading entry shows the real progress from Redux.
+ * onUploaded(document) runs after each successful upload.
  */
-export default function useDocumentUploads({ workspaceId, uploadedBy, onUploaded }) {
+export default function useDocumentUploads({ workspaceId, onUploaded }) {
+  const dispatch = useDispatch()
+  const uploadProgress = useSelector((state) => state.document.uploadProgress)
   const [uploads, setUploads] = useState([])
   const nextId = useRef(0)
+  const queue = useRef([])
+  const running = useRef(false)
+  // Latest callback, so an upload loop started earlier never calls an outdated one.
+  const onUploadedRef = useRef(onUploaded)
+  useEffect(() => {
+    onUploadedRef.current = onUploaded
+  })
+
+  // Files still waiting when the page unmounts (e.g. workspace switch) are not uploaded.
+  useEffect(() => () => (queue.current = []), [])
 
   const update = (id, patch) =>
     setUploads((current) => current.map((upload) => (upload.id === id ? { ...upload, ...patch } : upload)))
 
   const dismiss = (id) => setUploads((current) => current.filter((upload) => upload.id !== id))
 
-  const clearFinished = () => setUploads((current) => current.filter((upload) => upload.status === 'uploading'))
+  const clearFinished = () =>
+    setUploads((current) => current.filter((upload) => upload.status === 'uploading' || upload.status === 'queued'))
+
+  async function drain() {
+    if (running.current) return
+    running.current = true
+    while (queue.current.length) {
+      const { id, file } = queue.current.shift()
+      update(id, { status: 'uploading' })
+      try {
+        // workspaceId is fixed when the file is added, so a later switch can't redirect it.
+        const document = await dispatch(uploadDocument({ workspaceId, file })).unwrap()
+        update(id, { status: 'done' })
+        onUploadedRef.current?.(document)
+        setTimeout(() => dismiss(id), CLEAR_DONE_AFTER_MS)
+      } catch (error) {
+        update(id, { status: 'error', error: error.message })
+      }
+    }
+    running.current = false
+  }
 
   function addFiles(fileList) {
     const entries = [...fileList].map((file) => {
       const error = validateUploadFile(file)
-      return {
-        file,
-        entry: {
-          id: ++nextId.current,
-          name: file.name,
-          size: file.size,
-          type: getFileExtension(file.name),
-          status: error ? 'rejected' : 'uploading',
-          progress: 0,
-          error,
-        },
+      const entry = {
+        id: ++nextId.current,
+        name: file.name,
+        size: file.size,
+        type: getFileExtension(file.name),
+        status: error ? 'rejected' : 'queued',
+        error,
       }
+      if (!error) queue.current.push({ id: entry.id, file })
+      return entry
     })
 
-    setUploads((current) => [...entries.map(({ entry }) => entry), ...current])
-
-    for (const { file, entry } of entries) {
-      if (entry.status !== 'uploading') continue
-      uploadDocument(workspaceId, file, { uploadedBy, onProgress: (progress) => update(entry.id, { progress }) })
-        .then((document) => {
-          update(entry.id, { status: 'done', progress: 100 })
-          onUploaded?.(document)
-          setTimeout(() => dismiss(entry.id), CLEAR_DONE_AFTER_MS)
-        })
-        .catch((error) => update(entry.id, { status: 'error', error: error.message }))
-    }
-
-    return entries.map(({ entry }) => entry)
+    setUploads((current) => [...entries, ...current])
+    drain()
+    return entries
   }
 
-  return { uploads, addFiles, dismiss, clearFinished }
+  const visible = uploads.map((upload) => (upload.status === 'uploading' ? { ...upload, progress: uploadProgress } : upload))
+
+  return { uploads: visible, addFiles, dismiss, clearFinished }
 }

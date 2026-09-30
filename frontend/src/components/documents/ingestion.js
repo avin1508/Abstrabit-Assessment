@@ -1,7 +1,7 @@
 // Ingestion pipeline vocabulary shared by the documents table and details drawer.
 
+// Backend statuses: processing | indexed | failed. Stages: extracting | chunking | embedding.
 export const STAGE_LABELS = {
-  validating: 'Validating file',
   extracting: 'Extracting text',
   chunking: 'Chunking',
   embedding: 'Embedding',
@@ -16,11 +16,6 @@ const STEPS = [
   { id: 'indexed', label: 'Indexed', description: 'Searchable in this workspace' },
 ]
 
-// UI filter buckets: queued counts as processing.
-export function statusBucket(status) {
-  return status === 'queued' ? 'processing' : status
-}
-
 /*
  * Pipeline steps with a state each: done | current | queued | failed | pending.
  */
@@ -32,10 +27,6 @@ export function getPipelineSteps(document) {
   switch (document.status) {
     case 'indexed':
       activeIndex = STEPS.length
-      break
-    case 'queued':
-      activeIndex = index('extracting')
-      activeState = 'queued'
       break
     case 'processing':
       activeIndex = index(document.stage)

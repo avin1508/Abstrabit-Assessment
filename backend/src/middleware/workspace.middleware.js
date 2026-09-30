@@ -1,9 +1,14 @@
 import { getOwnedWorkspace } from '../services/workspace.service.js'
+import { HttpError } from '../utils/httpError.js'
 
-// For routes under /:workspaceId. Use after `authenticate`. Loads the workspace only if the
-// authenticated user owns it (404 otherwise) and attaches it as req.workspace, so handlers
-// scope every query with req.workspace._id rather than trusting the URL.
+// Use after `authenticate`. The workspace comes from the :workspaceId route param or the
+// X-Workspace-Id header. It is loaded only if the authenticated user owns it (404 otherwise)
+// and attached as req.workspace, so handlers scope every query with req.workspace._id rather
+// than trusting the client.
 export async function requireWorkspace(req, res, next) {
-  req.workspace = await getOwnedWorkspace(req.params.workspaceId, req.user.id)
+  const workspaceId = req.params.workspaceId ?? req.get('X-Workspace-Id')
+  if (!workspaceId) throw new HttpError(400, 'Select a workspace (X-Workspace-Id header)')
+
+  req.workspace = await getOwnedWorkspace(workspaceId, req.user.id)
   next()
 }
