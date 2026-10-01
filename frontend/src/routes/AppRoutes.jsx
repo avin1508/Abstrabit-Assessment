@@ -3,10 +3,8 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { PATHS } from './paths.js'
 import ProtectedRoute from './ProtectedRoute.jsx'
 import AppLayout from '../components/layout/AppLayout.jsx'
-import WorkspaceProvider from '../context/WorkspaceProvider.jsx'
 import AuthLayout from '../components/layout/AuthLayout.jsx'
 
-// Pages are code-split; AuthLayout and AppLayout provide the Suspense fallbacks.
 const LoginPage = lazy(() => import('../pages/LoginPage.jsx'))
 const RegisterPage = lazy(() => import('../pages/RegisterPage.jsx'))
 const DashboardPage = lazy(() => import('../pages/DashboardPage.jsx'))
@@ -27,13 +25,7 @@ export default function AppRoutes() {
       </Route>
 
       <Route element={<ProtectedRoute />}>
-        <Route
-          element={
-            <WorkspaceProvider>
-              <AppLayout />
-            </WorkspaceProvider>
-          }
-        >
+        <Route element={<AppLayout />}>
           <Route path={PATHS.DASHBOARD} element={<DashboardPage />} />
           <Route path={PATHS.DOCUMENTS} element={<DocumentsPage />} />
           <Route path={PATHS.CHAT} element={<ChatPage />} />

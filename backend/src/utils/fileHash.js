@@ -1,4 +1,12 @@
-// File hashing helper
-// Placeholder: implemented in a later module.
+import { createHash } from 'node:crypto'
+import { createReadStream } from 'node:fs'
 
-export {}
+export function hashFile(filePath) {
+  return new Promise((resolve, reject) => {
+    const hash = createHash('sha256')
+    createReadStream(filePath)
+      .on('data', (chunk) => hash.update(chunk))
+      .on('end', () => resolve(hash.digest('hex')))
+      .on('error', reject)
+  })
+}

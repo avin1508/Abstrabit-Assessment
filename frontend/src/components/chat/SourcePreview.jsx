@@ -11,10 +11,6 @@ function SectionTitle({ children }) {
   return <h3 className="mb-2 font-mono text-[10px] font-medium tracking-widest text-fg-subtle uppercase">{children}</h3>
 }
 
-/*
- * Preview of one cited passage: which claim it supports and the highlighted evidence.
- * Side drawer on larger screens, bottom sheet on phones. No real document viewer.
- */
 export default function SourcePreview({ message, citationIndex, workspace, onSelectCitation, onClose, sheet = false }) {
   // Evidence must belong to the active workspace; anything else is never rendered.
   const citations =

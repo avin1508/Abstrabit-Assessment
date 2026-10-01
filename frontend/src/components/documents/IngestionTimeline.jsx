@@ -25,7 +25,6 @@ function Marker({ state }) {
 
 const STATE_TEXT = { done: 'complete', current: 'in progress', queued: 'waiting', failed: 'failed', pending: 'not started' }
 
-// Vertical ingestion pipeline: uploaded → validated → extracted → chunked → embedded → indexed.
 export default function IngestionTimeline({ document }) {
   const steps = getPipelineSteps(document)
 

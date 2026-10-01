@@ -1,6 +1,5 @@
-import { useCallback, useState } from 'react'
-import { getAssistantContext } from '../services/chatService.js'
-import useAsyncData from '../hooks/useAsyncData.js'
+import { useState } from 'react'
+import { useSelector } from 'react-redux'
 import useAuth from '../hooks/useAuth.js'
 import useChat from '../hooks/useChat.js'
 import useMediaQuery from '../hooks/useMediaQuery.js'
@@ -34,7 +33,6 @@ function ThreadSkeleton() {
   )
 }
 
-// The latest answer that has evidence to show — or an honest "no evidence" state.
 function findLatestSourced(messages) {
   for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i]
@@ -50,28 +48,26 @@ export default function ChatPage() {
   const isPhone = useMediaQuery(PHONE)
 
   const chat = useChat({ workspace, userName: user.name })
-  const contextLoader = useCallback(() => getAssistantContext(workspace.id), [workspace.id])
-  const { data: context } = useAsyncData(contextLoader)
+  const indexedCount = useSelector((state) =>
+    state.document.workspaceId === workspace.id ? state.document.statusCounts.indexed : null,
+  )
 
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [panelOpen, setPanelOpen] = useState(true) // ≥ xl side panel
-  const [sourcesDrawerOpen, setSourcesDrawerOpen] = useState(false) // < xl
-  const [selection, setSelection] = useState(null) // { messageId, citation }
+  const [panelOpen, setPanelOpen] = useState(true)
+  const [sourcesDrawerOpen, setSourcesDrawerOpen] = useState(false)
+  const [selection, setSelection] = useState(null)
   const [previewOpen, setPreviewOpen] = useState(false)
 
   // Only messages loaded for the active workspace are candidates — never another workspace's.
   const messages = chat.thread.messages.filter((message) => message.workspaceId === workspace.id)
 
-  // Sources follow the answer the user picked, else the latest answer with (or without) evidence.
   const selectedMessage = messages.find((message) => message.id === selection?.messageId) ?? findLatestSourced(messages)
   const activeSelection = selectedMessage && {
     messageId: selectedMessage.id,
     citation: selection?.messageId === selectedMessage.id ? selection.citation : null,
   }
-  const indexedCount = context?.indexedDocuments ?? 0
 
 
-  // [n] / source chip / source card → highlight that source and open its preview.
   function openCitation(messageId, citation) {
     setSelection({ messageId, citation })
     setPreviewOpen(true)
@@ -85,7 +81,6 @@ export default function ChatPage() {
     return chat.send(text)
   }
 
-  // "View all sources" → show the answer's sources without a preview.
   function showSources(messageId) {
     setSelection({ messageId, citation: null })
     if (isWide) setPanelOpen(true)
@@ -114,7 +109,7 @@ export default function ChatPage() {
   const sourcesProps = {
     message: selectedMessage,
     workspace,
-    indexedCount: context ? indexedCount : null,
+    indexedCount,
     activeCitation: activeSelection?.citation,
     onSelectCitation: openCitation,
   }
@@ -147,7 +142,7 @@ export default function ChatPage() {
             ) : chat.thread.status === 'new' ? (
               <ChatEmptyState
                 workspace={workspace}
-                indexedCount={indexedCount}
+                indexedCount={indexedCount ?? 0}
               />
             ) : (
               <ChatThread

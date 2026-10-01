@@ -14,10 +14,6 @@ const TOOL_STEPS = [
   { id: 'writing', label: 'Summarizing the result' },
 ]
 
-/*
- * Step-by-step progress for an in-flight assistant response.
- * phase: searching | reading | writing | tool
- */
 export default function ThinkingIndicator({ phase = 'searching' }) {
   const steps = phase === 'tool' ? TOOL_STEPS : RETRIEVAL_STEPS
   const current = Math.max(0, steps.findIndex((step) => step.id === phase))

@@ -3,10 +3,6 @@ import { CircleHelp } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
 import { formatRelativeTime } from '../../utils/format.js'
 
-/*
- * One conversation in a list: title, last activity and a preview of the last message.
- * Pass `onSelect` for the chat sidebar, or `to` to render it as a link (dashboard).
- */
 export default function ConversationItem({ conversation, active = false, onSelect, to }) {
   const { title, updatedAt, lastMessage } = conversation
   const ungrounded = lastMessage?.role === 'assistant' && lastMessage.grounded === false

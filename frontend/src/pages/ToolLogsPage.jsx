@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { RefreshCw, SquareTerminal } from 'lucide-react'
 import useToolLogs from '../hooks/useToolLogs.js'
 import useWorkspace from '../hooks/useWorkspace.js'
@@ -8,17 +7,9 @@ import ToolLogsTable, { ToolLogsTableSkeleton } from '../components/tools/ToolLo
 import WorkspaceScope from '../components/workspace/WorkspaceScope.jsx'
 import { Alert, Button, Card, EmptyState } from '../components/ui/index.js'
 
-// Client-side paging over the mock list; swap for API paging (page/limit) when the backend exists.
-const PAGE_SIZE = 5
-
 export default function ToolLogsPage() {
   const { activeWorkspace: workspace } = useWorkspace()
-  const { runs, status, error, reload } = useToolLogs(workspace.id)
-  const [page, setPage] = useState(1)
-
-  const pageCount = Math.max(1, Math.ceil(runs.length / PAGE_SIZE))
-  const currentPage = Math.min(page, pageCount)
-  const visible = runs.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const { runs, status, error, pagination, setPage, reload } = useToolLogs(workspace.id)
   const loading = status === 'loading' && runs.length === 0
 
   return (
@@ -55,8 +46,8 @@ export default function ToolLogsPage() {
           />
         ) : (
           <>
-            <ToolLogsTable runs={visible} />
-            <Pagination page={currentPage} pageCount={pageCount} onChange={setPage} label="Tool log pages" />
+            <ToolLogsTable runs={runs} />
+            <Pagination page={pagination.page} pageCount={Math.max(1, pagination.totalPages)} onChange={setPage} label="Tool log pages" />
           </>
         )}
       </Card>

@@ -10,7 +10,6 @@ export const SUPPORTED_FILE_TYPES = {
 export const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
 export const MAX_FILE_SIZE_LABEL = '20 MB'
 
-// Value for <input accept="…">.
 export const ACCEPTED_EXTENSIONS = Object.keys(SUPPORTED_FILE_TYPES)
   .map((extension) => `.${extension}`)
   .join(',')
@@ -20,7 +19,6 @@ export function getFileExtension(name) {
   return match ? match[1].toLowerCase() : ''
 }
 
-// Returns an error message, or null when the file can be uploaded.
 export function validateUploadFile(file) {
   const extension = getFileExtension(file.name)
   if (!SUPPORTED_FILE_TYPES[extension]) {

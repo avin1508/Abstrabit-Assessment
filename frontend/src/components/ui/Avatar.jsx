@@ -22,7 +22,6 @@ function initials(name = '') {
   return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase()
 }
 
-// Stable color per name so the same person/workspace always looks the same.
 function colorFor(name = '') {
   let hash = 0
   for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) >>> 0

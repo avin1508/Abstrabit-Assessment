@@ -1,48 +1,40 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
 import { Mail } from 'lucide-react'
 import { PATHS } from '../routes/paths.js'
-import { login } from '../services/authService.js'
+import { login } from '../store/slices/authSlice.js'
 import { validateLogin } from '../utils/validation.js'
-import { DEMO_CREDENTIALS } from '../data/mockAuth.js'
 import useForm from '../hooks/useForm.js'
 import useToast from '../hooks/useToast.js'
 import AuthFormHeader from '../components/auth/AuthFormHeader.jsx'
-import { Alert, Button, Input, PasswordInput } from '../components/ui/index.js'
+import { Button, Input, PasswordInput } from '../components/ui/index.js'
 
 const linkClass =
   'rounded-sm font-medium text-brand-600 outline-none hover:text-brand-700 hover:underline focus-visible:ring-2 focus-visible:ring-brand-500/40'
 
 export default function LoginPage() {
-  const navigate = useNavigate()
-  const location = useLocation()
+  const dispatch = useDispatch()
   const { toast } = useToast()
-  const redirectTo = location.state?.from?.pathname ?? PATHS.DASHBOARD
 
   const form = useForm({
     initialValues: { email: '', password: '' },
     validate: validateLogin,
+    // Errors are shown as a toast so nothing above the form appears and shifts the layout.
     onSubmit: async (values) => {
-      const { user } = await login(values)
-      toast({ tone: 'success', title: `Welcome back, ${user.name.split(' ')[0]}` })
-      navigate(redirectTo, { replace: true })
+      try {
+        const { user } = await dispatch(login(values)).unwrap()
+        toast({ tone: 'success', title: `Welcome back, ${user.name.split(' ')[0]}` })
+      } catch (error) {
+        toast({ tone: 'danger', title: 'Couldn’t sign you in', description: error.message })
+      }
     },
   })
-
-  function fillDemoAccount() {
-    form.setValues((values) => ({ ...values, ...DEMO_CREDENTIALS }))
-  }
 
   return (
     <>
       <AuthFormHeader title="Sign in" description="Welcome back. Enter your details to access your workspaces." />
 
-      <form onSubmit={form.handleSubmit} noValidate className="space-y-5">
-        {form.submitError && (
-          <Alert tone="danger" title="Couldn’t sign you in">
-            {form.submitError}
-          </Alert>
-        )}
-
+      <form onSubmit={form.handleSubmit} noValidate className="space-y-6">
         <Input
           label="Email"
           type="email"
@@ -50,6 +42,7 @@ export default function LoginPage() {
           placeholder="you@company.com"
           leftIcon={Mail}
           size="lg"
+          floatingMessage
           autoFocus
           {...form.register('email')}
         />
@@ -59,6 +52,7 @@ export default function LoginPage() {
           autoComplete="current-password"
           placeholder="Enter your password"
           size="lg"
+          floatingMessage
           {...form.register('password')}
         />
 
@@ -66,18 +60,6 @@ export default function LoginPage() {
           {form.isSubmitting ? 'Signing in…' : 'Sign in'}
         </Button>
       </form>
-
-      <div className="mt-6 flex items-center justify-between gap-3 rounded-lg border border-dashed border-line-strong bg-surface-muted/50 px-3.5 py-2.5">
-        <p className="min-w-0 text-xs text-fg-muted">
-          <span className="font-medium text-fg">Demo account</span>
-          <span className="block truncate font-mono text-[11px] text-fg-subtle">
-            {DEMO_CREDENTIALS.email} / {DEMO_CREDENTIALS.password}
-          </span>
-        </p>
-        <Button size="sm" variant="secondary" onClick={fillDemoAccount}>
-          Fill in
-        </Button>
-      </div>
 
       <p className="mt-8 text-center text-sm text-fg-muted">
         Don’t have an account?{' '}

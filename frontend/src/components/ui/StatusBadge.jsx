@@ -1,9 +1,6 @@
 import Badge from './Badge.jsx'
 import StatusDot from './StatusDot.jsx'
 
-// Canonical mapping from backend status strings to visual treatment.
-// Documents: queued → processing → indexed | failed. Tool runs: pending → running → success | failed | blocked.
-// Tasks: open → completed.
 const STATUSES = {
   indexed: { tone: 'success', label: 'Indexed' },
   success: { tone: 'success', label: 'Success' },

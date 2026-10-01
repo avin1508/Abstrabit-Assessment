@@ -1,6 +1,5 @@
 import { cn } from '../../utils/cn.js'
 
-// Flat bordered surface. Prefer one Card per logical group rather than nesting cards.
 export function Card({ as: Component = 'div', className, children, ...props }) {
   return (
     <Component

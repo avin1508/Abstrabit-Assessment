@@ -1,11 +1,5 @@
 import { useState } from 'react'
 
-/*
- * Minimal form state for small forms.
- * - Field errors appear after a field is blurred with a value, or after the first submit.
- * - On an invalid submit, focus moves to the first invalid field.
- * - onSubmit may throw; its message becomes `submitError`.
- */
 export default function useForm({ initialValues, validate, onSubmit }) {
   const [values, setValues] = useState(initialValues)
   const [touched, setTouched] = useState({})

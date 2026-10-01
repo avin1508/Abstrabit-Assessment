@@ -2,7 +2,6 @@ import ProgressBar from '../ui/ProgressBar.jsx'
 import StatusBadge from '../ui/StatusBadge.jsx'
 import { STAGE_LABELS } from './ingestion.js'
 
-// Status badge plus, for in-flight documents, the current stage and progress.
 export default function DocumentStatus({ document, showDetail = true }) {
   const { status, stage, progress } = document
 
@@ -11,14 +10,11 @@ export default function DocumentStatus({ document, showDetail = true }) {
       <StatusBadge status={status} />
       {showDetail && status === 'processing' && (
         <div className="mt-1.5 w-36">
-          <ProgressBar value={progress} tone="info" label={`${STAGE_LABELS[stage]} progress`} />
+          <ProgressBar value={progress} tone="info" label={`${STAGE_LABELS[stage] ?? 'Processing'} progress`} />
           <p className="mt-1 truncate font-mono text-[10px] text-fg-subtle">
-            {STAGE_LABELS[stage]} · {progress}%
+            {STAGE_LABELS[stage] ?? 'Processing'} · {progress}%
           </p>
         </div>
-      )}
-      {showDetail && status === 'queued' && (
-        <p className="mt-1 font-mono text-[10px] text-fg-subtle">Waiting to start</p>
       )}
     </div>
   )

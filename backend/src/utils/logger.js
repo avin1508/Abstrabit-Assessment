@@ -1,4 +1,3 @@
-// Minimal timestamped console logger.
 const stamp = () => new Date().toISOString()
 
 export const logger = {

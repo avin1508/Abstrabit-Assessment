@@ -17,14 +17,22 @@ const SIZES = {
   xl: 'size-12 rounded-xl text-lg',
 }
 
-// Square monogram for a workspace. People use round <Avatar>; workspaces are always square.
+const PALETTE = ['brand', 'emerald', 'amber', 'sky', 'rose']
+
+function colorFor(workspace) {
+  const id = workspace?.id ?? ''
+  let hash = 0
+  for (const char of id) hash = (hash * 31 + char.charCodeAt(0)) >>> 0
+  return id ? PALETTE[hash % PALETTE.length] : 'neutral'
+}
+
 export default function WorkspaceAvatar({ workspace, size = 'md', className }) {
   return (
     <span
       aria-hidden
       className={cn(
         'inline-flex shrink-0 items-center justify-center font-semibold text-white shadow-xs ring-1 ring-black/5 ring-inset select-none',
-        COLORS[workspace?.color] ?? COLORS.neutral,
+        COLORS[colorFor(workspace)],
         SIZES[size],
         className,
       )}

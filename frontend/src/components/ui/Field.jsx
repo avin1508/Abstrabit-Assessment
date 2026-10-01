@@ -1,8 +1,12 @@
-// Label + hint/error wrapper shared by Input, Textarea and Select.
-// `labelAction` renders on the right of the label row (e.g. a "Forgot password?" link).
-export default function Field({ id, label, labelAction, hint, error, required, className, children }) {
+import { cn } from '../../utils/cn.js'
+
+// `floatingMessage` puts the hint/error in the gap below the field so the form doesn't jump
+// when it appears. Needs ~20px below the field and fits one line.
+export default function Field({ id, label, labelAction, hint, error, required, floatingMessage, className, children }) {
+  const messageClass = floatingMessage ? 'absolute inset-x-0 top-full mt-1 truncate text-xs' : 'mt-1.5 text-xs'
+
   return (
-    <div className={className}>
+    <div className={cn(floatingMessage && 'relative', className)}>
       {(label || labelAction) && (
         <div className="mb-1.5 flex items-center justify-between gap-2">
           {label && (
@@ -20,12 +24,12 @@ export default function Field({ id, label, labelAction, hint, error, required, c
       )}
       {children}
       {error ? (
-        <p id={`${id}-error`} className="mt-1.5 text-xs text-red-600">
+        <p id={`${id}-error`} className={cn(messageClass, 'text-red-600')}>
           {error}
         </p>
       ) : (
         hint && (
-          <p id={`${id}-hint`} className="mt-1.5 text-xs text-fg-subtle">
+          <p id={`${id}-hint`} className={cn(messageClass, 'text-fg-subtle')}>
             {hint}
           </p>
         )

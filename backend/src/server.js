@@ -2,7 +2,7 @@ import { env, pendingLaterVariables } from './config/env.js'
 import { connectDB, disconnectDB } from './config/db.js'
 import { verifyRedisConnection } from './config/redis.js'
 import { closeIngestionQueue, getIngestionQueue } from './queues/ingestion.queue.js'
-import { startIngestionWorker, stopIngestionWorker } from './queues/ingestion.worker.js'
+import { requeuePendingDocuments, startIngestionWorker, stopIngestionWorker } from './queues/ingestion.worker.js'
 import { logger } from './utils/logger.js'
 import app from './app.js'
 
@@ -11,13 +11,14 @@ import './models/index.js'
 
 async function start() {
   if (pendingLaterVariables.length) {
-    logger.warn(`Not set yet (needed by later modules): ${pendingLaterVariables.join(', ')}`)
+    logger.warn(`Not set (related features are disabled): ${pendingLaterVariables.join(', ')}`)
   }
 
   await connectDB()
   await verifyRedisConnection()
   getIngestionQueue()
   startIngestionWorker()
+  await requeuePendingDocuments().catch((error) => logger.error('[ingestion] re-queue on startup failed:', error.message))
 
   const server = app.listen(env.port, () => logger.info(`Server listening on port ${env.port}`))
 

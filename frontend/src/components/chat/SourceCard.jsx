@@ -4,10 +4,6 @@ import FileIcon from '../common/FileIcon.jsx'
 import CitationBadge from './CitationBadge.jsx'
 import { fileTypeLabel } from './sourceMeta.js'
 
-/*
- * One retrieved passage backing an answer. Clickable as a whole (opens the preview).
- * citation: { index, documentName, type, location, excerpt }
- */
 export default function SourceCard({ citation, workspaceName, active = false, onSelect }) {
   const { index, documentName, type, location, excerpt } = citation
 

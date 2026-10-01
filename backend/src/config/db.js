@@ -8,7 +8,6 @@ function buildMongoUri({ username, password, clusterUrl, name }) {
   return `mongodb+srv://${user}:${pass}@${clusterUrl}/${name}?retryWrites=true&w=majority`
 }
 
-// Connects to MongoDB Atlas. Throws on failure so startup can abort.
 export async function connectDB() {
   mongoose.connection.on('disconnected', () => logger.warn('MongoDB disconnected'))
   mongoose.connection.on('reconnected', () => logger.info('MongoDB reconnected'))

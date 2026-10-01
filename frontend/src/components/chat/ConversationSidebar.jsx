@@ -6,10 +6,6 @@ import Input from '../ui/Input.jsx'
 import Skeleton from '../ui/Skeleton.jsx'
 import ConversationItem from './ConversationItem.jsx'
 
-/*
- * Conversation history for the active workspace only.
- * `embedded` hides the title row (used inside the mobile drawer, which has its own title).
- */
 export default function ConversationSidebar({ workspace, conversations, activeId, onSelect, onNew, embedded = false }) {
   const [query, setQuery] = useState('')
   const loading = conversations.status === 'loading'

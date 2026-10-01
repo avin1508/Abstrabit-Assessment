@@ -7,16 +7,11 @@ import Kbd from './Kbd.jsx'
 const VIEWPORT_MARGIN = 8
 const GAP = 4
 
-/*
- * Action menu, rendered in a portal so it isn't clipped by scroll containers (tables, drawers).
- *   renderTrigger({ open, ...triggerProps }) → element; spread triggerProps onto your button.
- *   items: { label, icon, onSelect, tone: 'danger', shortcut, disabled }
- *        | { type: 'separator' } | { type: 'label', label }
- */
+// Rendered in a portal so tables and drawers don't clip it.
 export default function Dropdown({ renderTrigger, items, align = 'start', className }) {
   const { open, rootRef, menuRef, triggerProps, onMenuKeyDown, closeAndFocusTrigger } = useMenu()
 
-  // Position next to the trigger; flip above when there's no room below.
+  // Flip above the trigger when there's no room below.
   useLayoutEffect(() => {
     const trigger = rootRef.current?.querySelector('[aria-haspopup]')
     const menu = menuRef.current

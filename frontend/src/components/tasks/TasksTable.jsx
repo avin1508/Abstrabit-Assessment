@@ -21,7 +21,6 @@ function Title({ task }) {
   )
 }
 
-// Tasks as a table from `md` up and as stacked rows on phones. Only action: complete / reopen.
 export default function TasksTable({ tasks, writable, onToggle }) {
   return (
     <>

@@ -3,10 +3,7 @@ import { CircleHelp, FileX } from 'lucide-react'
 import { PATHS } from '../../routes/paths.js'
 import AnswerText from './AnswerText.jsx'
 
-/*
- * The honest fallback: the workspace documents don't support an answer.
- * Deliberately shows no citations — there is no evidence to show.
- */
+// No citations on purpose: there's no evidence to show.
 export default function UnknownAnswerState({ text, workspaceName }) {
   return (
     <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50/40 p-4">

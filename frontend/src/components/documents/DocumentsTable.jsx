@@ -24,19 +24,13 @@ function NameButton({ document, onOpen }) {
   )
 }
 
-/*
- * Documents as a table from `md` up and as stacked rows on phones.
- * `actions` = { writable, onOpen, onRetry, onDelete }
- */
 export default function DocumentsTable({ documents, selectedId, actions }) {
   const { onOpen } = actions
   const stop = (event) => event.stopPropagation()
 
   return (
     <>
-      {/* ≥ md: table */}
       <div className="hidden overflow-x-auto md:block">
-        {/* Fixed layout: every column but Name has a set width; Name takes the rest and truncates. */}
         <table className="w-full table-fixed border-collapse text-sm">
           <thead className="border-b border-line bg-surface-muted/60">
             <tr>
@@ -88,7 +82,6 @@ export default function DocumentsTable({ documents, selectedId, actions }) {
         </table>
       </div>
 
-      {/* < md: stacked rows */}
       <ul className="divide-y divide-line md:hidden">
         {documents.map((document) => (
           <li

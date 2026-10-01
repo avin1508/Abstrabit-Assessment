@@ -3,7 +3,6 @@ import Button from '../ui/Button.jsx'
 import IconButton from '../ui/IconButton.jsx'
 import WorkspaceAvatar from '../workspace/WorkspaceAvatar.jsx'
 
-// Chat title bar: product name, active workspace and panel toggles.
 export default function ChatHeader({ workspace, conversationTitle, sourcesOpen, onOpenHistory, onToggleSources, onNew }) {
   return (
     <header className="flex min-w-0 items-center gap-2 border-b border-line bg-surface px-3 py-2.5 sm:gap-3 sm:px-5">

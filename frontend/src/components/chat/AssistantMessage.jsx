@@ -36,12 +36,6 @@ function GroundingBadge({ message }) {
   }
 }
 
-/*
- * The answer side of a turn. States: thinking | answer (with/without citations) | unknown | error.
- * `selected` marks the answer whose sources are open in the Sources panel; `activeCitation` is the
- * source highlighted there. onSelectCitation(messageId, index) opens the preview for [index];
- * onShowSources(messageId) shows the answer's sources without opening a preview.
- */
 export default function AssistantMessage({
   message,
   workspaceName,

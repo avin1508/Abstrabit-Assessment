@@ -2,8 +2,6 @@ import { cn } from '../../utils/cn.js'
 import { focusRing } from '../../utils/styles.js'
 import LoadingSpinner from './LoadingSpinner.jsx'
 
-// Visual weight, highest to lowest: primary > secondary > ghost.
-// Destructive actions use `danger` (confirming) or `danger-secondary` (initiating).
 const VARIANTS = {
   primary:
     'bg-brand-600 text-white shadow-xs shadow-brand-900/10 hover:bg-brand-700 active:bg-brand-800 disabled:bg-brand-600/50',

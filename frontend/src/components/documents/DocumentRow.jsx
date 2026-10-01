@@ -6,11 +6,10 @@ import StatusBadge from '../ui/StatusBadge.jsx'
 function chunkLabel(document) {
   if (document.chunkCount != null) return `${formatNumber(document.chunkCount)} chunks`
   if (document.status === 'failed') return 'Not indexed'
-  return 'Indexing…'
+  if (document.status === 'processing') return 'Indexing…'
+  return '—'
 }
 
-// Compact document row: file, type/size, chunk count, upload time, status.
-// Extra columns appear from `sm`; on phones they fold into the meta line.
 export default function DocumentRow({ document }) {
   return (
     <li className="flex items-center gap-3 px-5 py-3">

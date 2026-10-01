@@ -1,7 +1,6 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { FileSearch, FolderOpen, RefreshCw, Search, Upload, X } from 'lucide-react'
 import { canWrite } from '../utils/permissions.js'
-import useAuth from '../hooks/useAuth.js'
 import useDocuments from '../hooks/useDocuments.js'
 import useDocumentUploads from '../hooks/useDocumentUploads.js'
 import useToast from '../hooks/useToast.js'
@@ -12,7 +11,6 @@ import DocumentDetailsDrawer from '../components/documents/DocumentDetailsDrawer
 import DocumentsTable, { DocumentsTableSkeleton } from '../components/documents/DocumentsTable.jsx'
 import UploadDropzone from '../components/documents/UploadDropzone.jsx'
 import UploadQueue from '../components/documents/UploadQueue.jsx'
-import { statusBucket } from '../components/documents/ingestion.js'
 import WorkspaceScope from '../components/workspace/WorkspaceScope.jsx'
 import {
   Alert,
@@ -25,8 +23,7 @@ import {
   Tooltip,
 } from '../components/ui/index.js'
 
-// Client-side paging over the mock list; swap for API paging (page/limit) when the backend exists.
-const PAGE_SIZE = 5
+const SEARCH_DEBOUNCE_MS = 300
 
 const FILTERS = [
   { value: 'all', label: 'All' },
@@ -36,56 +33,50 @@ const FILTERS = [
 ]
 
 export default function DocumentsPage() {
-  const { user } = useAuth()
   const { activeWorkspace: workspace } = useWorkspace()
   const { toast } = useToast()
   const writable = canWrite(workspace)
 
-  const { documents, status, error, reload, addDocument, retry, remove } = useDocuments(workspace.id)
+  const {
+    documents,
+    status,
+    error,
+    pagination,
+    filters,
+    statusCounts,
+    setPage,
+    setStatusFilter,
+    setSearch,
+    clearFilters,
+    reload,
+    retry,
+    remove,
+  } = useDocuments(workspace.id)
+  // New uploads are newest, so show page 1 (with the current filters) after each one.
   const { uploads, addFiles, dismiss, clearFinished } = useDocumentUploads({
     workspaceId: workspace.id,
-    uploadedBy: user.name,
-    onUploaded: addDocument,
+    onUploaded: () => setPage(1),
   })
 
   const dropzoneRef = useRef(null)
-  const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState('all')
+  const [query, setQuery] = useState(filters.search)
   const [selectedId, setSelectedId] = useState(null)
   const [pendingDelete, setPendingDelete] = useState(null)
-  // The page resets to 1 whenever the search or status filter changes.
-  const [paging, setPaging] = useState({ key: '', page: 1 })
 
-  // Look the selection up in the live list so the drawer reflects ingestion progress.
+  useEffect(() => {
+    const value = query.trim()
+    if (value === filters.search) return
+    const timer = setTimeout(() => setSearch(value), SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [query, filters.search, setSearch])
+
+  // Read from the current page so the drawer shows live ingestion progress.
   const selected = documents.find((document) => document.id === selectedId) ?? null
-
-  const counts = useMemo(() => {
-    const result = { all: documents.length, indexed: 0, processing: 0, failed: 0 }
-    for (const document of documents) result[statusBucket(document.status)] += 1
-    return result
-  }, [documents])
-
-
-  const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase()
-    return documents.filter(
-      (document) =>
-        (filter === 'all' || statusBucket(document.status) === filter) &&
-        (!needle || document.name.toLowerCase().includes(needle)),
-    )
-  }, [documents, filter, query])
-
-  const pagingKey = `${filter}|${query.trim().toLowerCase()}`
-  const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
-  const currentPage = Math.min(paging.key === pagingKey ? paging.page : 1, pageCount)
-  const pageRows = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   function handleFiles(files) {
     const entries = addFiles(files)
-    const accepted = entries.filter((entry) => entry.status === 'uploading').length
+    const accepted = entries.filter((entry) => entry.status === 'queued').length
     if (accepted) {
-      // New uploads appear at the top of the list, so show page 1.
-      setPaging({ key: pagingKey, page: 1 })
       toast({
         tone: 'info',
         title: `Uploading ${accepted} ${accepted === 1 ? 'file' : 'files'} to ${workspace.name}`,
@@ -129,7 +120,8 @@ export default function DocumentsPage() {
   )
 
   const loading = status === 'loading' && documents.length === 0
-  const workspaceEmpty = status === 'success' && documents.length === 0
+  const workspaceEmpty = status === 'success' && statusCounts.all === 0
+  const filtered = filters.status !== 'all' || Boolean(filters.search)
 
   return (
     <div className="space-y-6">
@@ -155,7 +147,7 @@ export default function DocumentsPage() {
             </Button>
           }
         >
-          {error?.message}
+          {error}
         </Alert>
       )}
 
@@ -166,16 +158,16 @@ export default function DocumentsPage() {
             <p className="font-mono text-[11px] text-fg-subtle" aria-live="polite">
               {loading
                 ? 'Loading…'
-                : `${counts.all} ${counts.all === 1 ? 'document' : 'documents'}`}
-              {counts.processing > 0 && ` · ${counts.processing} processing`}
+                : `${statusCounts.all} ${statusCounts.all === 1 ? 'document' : 'documents'}`}
+              {statusCounts.processing > 0 && ` · ${statusCounts.processing} processing`}
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <SegmentedControl
               label="Filter by status"
-              value={filter}
-              onChange={setFilter}
-              options={FILTERS.map((option) => ({ ...option, count: loading ? null : counts[option.value] }))}
+              value={filters.status}
+              onChange={setStatusFilter}
+              options={FILTERS.map((option) => ({ ...option, count: loading ? null : statusCounts[option.value] }))}
             />
             <Input
               aria-label="Search documents"
@@ -211,17 +203,19 @@ export default function DocumentsPage() {
             action={writable && uploadButton}
             className="py-16"
           />
-        ) : visible.length === 0 ? (
+        ) : documents.length === 0 && filtered ? (
           <EmptyState
             icon={FileSearch}
             title="No matching documents"
-            description={query ? `Nothing matches “${query}” with the current filter.` : 'No documents have this status.'}
+            description={
+              filters.search ? `Nothing matches “${filters.search}” with the current filter.` : 'No documents have this status.'
+            }
             action={
               <Button
                 size="sm"
                 onClick={() => {
                   setQuery('')
-                  setFilter('all')
+                  clearFilters()
                 }}
               >
                 Clear filters
@@ -230,11 +224,11 @@ export default function DocumentsPage() {
           />
         ) : (
           <>
-            <DocumentsTable documents={pageRows} selectedId={selectedId} actions={actions} />
+            <DocumentsTable documents={documents} selectedId={selectedId} actions={actions} />
             <Pagination
-              page={currentPage}
-              pageCount={pageCount}
-              onChange={(page) => setPaging({ key: pagingKey, page })}
+              page={pagination.page}
+              pageCount={Math.max(1, pagination.totalPages)}
+              onChange={setPage}
               label="Documents pages"
             />
           </>

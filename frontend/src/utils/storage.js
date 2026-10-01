@@ -1,5 +1,4 @@
-// localStorage wrappers that never throw (private mode, blocked storage, SSR).
-
+// localStorage can throw (private mode, blocked storage), so these never do.
 export function readStorage(key) {
   try {
     return window.localStorage.getItem(key)
@@ -13,5 +12,13 @@ export function writeStorage(key, value) {
     window.localStorage.setItem(key, value)
   } catch {
     // Persistence is a convenience; ignore failures.
+  }
+}
+
+export function removeStorage(key) {
+  try {
+    window.localStorage.removeItem(key)
+  } catch {
+    // Ignore; nothing to clean up.
   }
 }

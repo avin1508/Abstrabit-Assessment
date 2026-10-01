@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { FileUp, MessageSquareDashed, RefreshCw, Wrench } from 'lucide-react'
 import { PATHS } from '../routes/paths.js'
-import { getWorkspaceOverview } from '../services/dashboardService.js'
+import { getWorkspaceOverviewRequest } from '../api/overview.api.js'
 import { canWrite } from '../utils/permissions.js'
 import useAsyncData from '../hooks/useAsyncData.js'
 import useWorkspace from '../hooks/useWorkspace.js'
@@ -16,7 +16,7 @@ import { Alert, Button, EmptyState } from '../components/ui/index.js'
 
 export default function DashboardPage() {
   const { activeWorkspace } = useWorkspace()
-  const loader = useCallback(() => getWorkspaceOverview(activeWorkspace.id), [activeWorkspace.id])
+  const loader = useCallback(() => getWorkspaceOverviewRequest(activeWorkspace.id), [activeWorkspace.id])
   const { data, status, error, reload } = useAsyncData(loader)
 
   const loading = status === 'loading' && !data

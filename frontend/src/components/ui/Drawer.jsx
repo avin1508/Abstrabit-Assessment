@@ -13,11 +13,9 @@ const SIZES = {
 const SIDES = {
   right: { container: 'justify-end', panel: 'h-full animate-slide-in-right border-l' },
   left: { container: 'justify-start', panel: 'h-full animate-slide-in-left border-r' },
-  // Bottom sheet for phones: full width, capped height, rounded top.
   bottom: { container: 'items-end', panel: 'max-h-[88dvh] animate-slide-in-up rounded-t-2xl border-t' },
 }
 
-// Sheet for details panels. side: 'right' (default) | 'left' | 'bottom'. Full-width on phones.
 export default function Drawer({ open, onClose, title, description, header, footer, size = 'lg', side = 'right', children }) {
   const panelRef = useRef(null)
   const titleId = useId()

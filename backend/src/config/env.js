@@ -1,10 +1,8 @@
 import 'dotenv/config'
 
-// Required for the server to boot (database + queue).
-const REQUIRED = ['DB_USERNAME', 'DB_PASSWORD', 'DB_CLUSTER_URL', 'DB_NAME', 'REDIS_URL']
+const REQUIRED = ['DB_USERNAME', 'DB_PASSWORD', 'DB_CLUSTER_URL', 'DB_NAME', 'REDIS_URL', 'JWT_SECRET']
 
-// Needed by later modules (auth, AI, Discord). Allowed to be empty in Module 0.
-const LATER = ['JWT_SECRET', 'GEMINI_API_KEY', 'DISCORD_WEBHOOK_URL']
+const LATER = ['GEMINI_API_KEY', 'DISCORD_WEBHOOK_URL']
 
 const missing = REQUIRED.filter((key) => !process.env[key]?.trim())
 if (missing.length) {
@@ -16,12 +14,23 @@ if (!Number.isInteger(port) || port <= 0) {
   throw new Error(`PORT must be a positive integer, received "${process.env.PORT}"`)
 }
 
+// Chunks below this score aren't used as context. 0.78 came from testing: answerable questions
+// scored 0.815–0.888, off-topic ones 0.744–0.794.
+const ragMinScore = Number(process.env.RAG_MIN_SCORE ?? 0.78)
+if (!(ragMinScore >= 0 && ragMinScore <= 1)) {
+  throw new Error(`RAG_MIN_SCORE must be a number between 0 and 1, received "${process.env.RAG_MIN_SCORE}"`)
+}
+
 export const pendingLaterVariables = LATER.filter((key) => !process.env[key]?.trim())
 
 export const env = Object.freeze({
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port,
-  clientUrl: process.env.CLIENT_URL ?? 'http://localhost:5173',
+  // Allowed CORS origins; CLIENT_URL may list several, comma-separated.
+  clientUrls: (process.env.CLIENT_URL ?? 'http://localhost:5173')
+    .split(',')
+    .map((url) => url.trim())
+    .filter(Boolean),
   db: Object.freeze({
     username: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
@@ -29,7 +38,14 @@ export const env = Object.freeze({
     name: process.env.DB_NAME,
   }),
   redisUrl: process.env.REDIS_URL,
-  jwtSecret: process.env.JWT_SECRET ?? '',
+  jwtSecret: process.env.JWT_SECRET,
   geminiApiKey: process.env.GEMINI_API_KEY ?? '',
+  geminiChatModel: process.env.GEMINI_CHAT_MODEL?.trim() || 'gemini-3.5-flash',
+  // Each model has its own free-tier quota, so fallbacks keep chat working when one runs out.
+  geminiChatFallbackModels: (process.env.GEMINI_CHAT_FALLBACK_MODELS ?? 'gemini-3-flash-preview,gemini-3.1-flash-lite')
+    .split(',')
+    .map((model) => model.trim())
+    .filter(Boolean),
+  ragMinScore,
   discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL ?? '',
 })

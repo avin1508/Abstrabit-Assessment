@@ -7,13 +7,6 @@ const dialogStack = []
 const FOCUSABLE =
   'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
 
-/*
- * Shared behavior for Modal and Drawer while `open`:
- *   - Escape closes (top dialog only)
- *   - Tab is trapped inside the panel
- *   - body scroll is locked
- *   - focus moves into the panel, and returns to the previously focused element on close
- */
 export default function useDialog(open, onClose, panelRef) {
   const handleClose = useEffectEvent(() => onClose())
 

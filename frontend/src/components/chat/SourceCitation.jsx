@@ -3,7 +3,6 @@ import { focusRing } from '../../utils/styles.js'
 import FileIcon from '../common/FileIcon.jsx'
 import CitationBadge from './CitationBadge.jsx'
 
-// Compact source chip under an answer: "[1] Refund Policy v4.md · Section: Refund Eligibility".
 export default function SourceCitation({ citation, active = false, onClick }) {
   return (
     <button

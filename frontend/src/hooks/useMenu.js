@@ -2,13 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 const ITEM_SELECTOR = '[role^="menuitem"]:not(:disabled)'
 
-/*
- * Open/close + keyboard behavior shared by menu-style popovers.
- * Spread `triggerProps` on the trigger button, attach `rootRef` to the wrapper and
- * `menuRef` + `onMenuKeyDown` to the menu (which may be portaled elsewhere).
- * Closes on outside press, window resize and scroll outside the menu.
- * On open, focus goes to the checked item (if any) or the first item.
- */
 export default function useMenu() {
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)

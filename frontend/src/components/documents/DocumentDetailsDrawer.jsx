@@ -31,21 +31,15 @@ function StatusSummary({ document, workspace, writable, onRetry }) {
       return (
         <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-3.5">
           <div className="flex items-center justify-between gap-3 text-sm">
-            <p className="font-medium text-fg">{STAGE_LABELS[document.stage]}…</p>
+            <p className="font-medium text-fg">{STAGE_LABELS[document.stage] ?? 'Processing'}…</p>
             <span className="font-mono text-xs text-sky-700 tabular-nums">{document.progress}%</span>
           </div>
           <ProgressBar value={document.progress} tone="info" label="Ingestion progress" className="mt-2" />
           <p className="mt-2 text-xs text-fg-muted">Answers won’t cite this document until indexing finishes.</p>
         </div>
       )
-    case 'queued':
-      return (
-        <Alert tone="neutral" title="Queued for ingestion">
-          Processing starts shortly. This page updates automatically.
-        </Alert>
-      )
     case 'failed': {
-      const retryable = writable && document.failedStage !== 'validating'
+      const retryable = writable
       return (
         <Alert
           tone="danger"
