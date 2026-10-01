@@ -86,3 +86,23 @@ npm run embeddings:backfill                # re-queue; the running server's work
 
 `GET /api/documents/search?q=<text>&limit=5` (JWT + `X-Workspace-Id`) returns the most similar
 chunks of the verified workspace with their Atlas similarity score.
+
+## Chat (grounded RAG)
+
+All routes need a JWT and `X-Workspace-Id`; conversations are visible only to their user, in their workspace.
+
+| Method | Path | |
+|---|---|---|
+| POST | `/api/conversations` | `{ title? }` |
+| GET | `/api/conversations` | newest first |
+| GET | `/api/conversations/:id` | conversation + messages |
+| POST | `/api/conversations/:id/messages` | `{ content }` → `{ userMessage, assistantMessage }` |
+| POST | `/api/conversations/:id/retry` | re-answers the latest failed question |
+
+Flow: retrieve the top chunks of the verified workspace (`$vectorSearch` with a `workspaceId` filter)
+→ keep chunks scoring at least `RAG_MIN_SCORE` → if none, answer `I don't know.` → otherwise send the
+numbered sources (as untrusted data, separate from the system instruction) to Gemini → keep only the
+sources the answer cites `[n]` as the message's citations.
+
+Settings: `GEMINI_CHAT_MODEL` (default `gemini-3.5-flash`), `GEMINI_CHAT_FALLBACK_MODELS` (used when
+the main model is over quota or unavailable) and `RAG_MIN_SCORE` (default `0.78`).
