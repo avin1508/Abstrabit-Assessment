@@ -1,36 +1,27 @@
-import { useCallback, useEffect, useState } from 'react'
-import { listToolRuns } from '../services/toolService.js'
+import { useCallback, useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import { fetchToolCalls, TOOL_CALL_PAGE_SIZE } from '../store/slices/toolCallSlice.js'
 
-const POLL_MS = 1500
-const IN_FLIGHT = new Set(['pending', 'running'])
-
-// Tool runs for one workspace. Re-fetches quietly while any run is pending/running.
+/*
+ * The active workspace's tool call log, one backend page at a time, from toolCallSlice.
+ * status: loading | error | success
+ */
 export default function useToolLogs(workspaceId) {
-  const [state, setState] = useState({ status: 'loading', runs: [], error: null })
-  const [reloadKey, setReloadKey] = useState(0)
-  const [tick, setTick] = useState(0)
+  const dispatch = useDispatch()
+  const state = useSelector((root) => root.toolCall)
 
   useEffect(() => {
-    let cancelled = false
-    listToolRuns(workspaceId)
-      .then((runs) => !cancelled && setState({ status: 'success', runs, error: null }))
-      .catch((error) => !cancelled && setState((current) => ({ ...current, status: 'error', error })))
-    return () => {
-      cancelled = true
-    }
-  }, [workspaceId, reloadKey, tick])
+    dispatch(fetchToolCalls({ workspaceId, page: 1 }))
+  }, [workspaceId, dispatch])
 
-  const hasInFlight = state.runs.some((run) => IN_FLIGHT.has(run.status))
-  useEffect(() => {
-    if (!hasInFlight) return
-    const timer = setInterval(() => setTick((value) => value + 1), POLL_MS)
-    return () => clearInterval(timer)
-  }, [hasInFlight])
+  // Until this workspace's log arrives, show nothing rather than another workspace's calls.
+  const current = state.workspaceId === workspaceId
+  const runs = current ? state.items : []
+  const status = current && state.error ? 'error' : !current || state.loading ? 'loading' : 'success'
+  const pagination = current ? state.pagination : { page: 1, limit: TOOL_CALL_PAGE_SIZE, total: 0, totalPages: 0 }
 
-  const reload = useCallback(() => {
-    setState((current) => ({ ...current, status: 'loading', error: null }))
-    setReloadKey((key) => key + 1)
-  }, [])
+  const setPage = useCallback((page) => dispatch(fetchToolCalls({ workspaceId, page })), [dispatch, workspaceId])
+  const reload = useCallback(() => dispatch(fetchToolCalls({ workspaceId, page: pagination.page })), [dispatch, workspaceId, pagination.page])
 
-  return { ...state, reload }
+  return { runs, status, error: current && state.error ? { message: state.error } : null, pagination, setPage, reload }
 }

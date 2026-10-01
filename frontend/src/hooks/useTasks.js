@@ -1,31 +1,38 @@
-import { useCallback, useEffect, useState } from 'react'
-import { listTasks, setTaskStatus } from '../services/taskService.js'
+import { useCallback, useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import { fetchTasks, TASK_PAGE_SIZE, updateTaskStatus } from '../store/slices/taskSlice.js'
 
-// Tasks for one workspace, plus the complete/reopen toggle.
+/*
+ * The active workspace's tasks, one backend page at a time, from taskSlice, plus the
+ * complete/reopen toggle. status: loading | error | success
+ */
 export default function useTasks(workspaceId) {
-  const [state, setState] = useState({ status: 'loading', tasks: [], error: null })
-  const [reloadKey, setReloadKey] = useState(0)
+  const dispatch = useDispatch()
+  const state = useSelector((root) => root.task)
 
   useEffect(() => {
-    let cancelled = false
-    listTasks(workspaceId)
-      .then((tasks) => !cancelled && setState({ status: 'success', tasks, error: null }))
-      .catch((error) => !cancelled && setState((current) => ({ ...current, status: 'error', error })))
-    return () => {
-      cancelled = true
-    }
-  }, [workspaceId, reloadKey])
+    dispatch(fetchTasks({ workspaceId, page: 1 }))
+  }, [workspaceId, dispatch])
 
-  const reload = useCallback(() => {
-    setState((current) => ({ ...current, status: 'loading', error: null }))
-    setReloadKey((key) => key + 1)
-  }, [])
+  // Until this workspace's list arrives, show nothing rather than another workspace's tasks.
+  const current = state.workspaceId === workspaceId
+  const tasks = current ? state.items : []
+  const status = current && state.error ? 'error' : !current || state.loading ? 'loading' : 'success'
+  const pagination = current ? state.pagination : { page: 1, limit: TASK_PAGE_SIZE, total: 0, totalPages: 0 }
 
-  async function toggle(taskId, status) {
-    const task = await setTaskStatus(workspaceId, taskId, status)
-    setState((current) => ({ ...current, tasks: current.tasks.map((existing) => (existing.id === taskId ? task : existing)) }))
-    return task
+  const setPage = useCallback((page) => dispatch(fetchTasks({ workspaceId, page })), [dispatch, workspaceId])
+  const reload = useCallback(() => dispatch(fetchTasks({ workspaceId, page: pagination.page })), [dispatch, workspaceId, pagination.page])
+
+  // Resolves with the updated task or throws { message }. Ignored while that task is updating.
+  const toggle = (taskId, nextStatus) => dispatch(updateTaskStatus({ workspaceId, taskId, status: nextStatus })).unwrap()
+
+  return {
+    tasks,
+    status,
+    error: current && state.error ? { message: state.error } : null,
+    pagination,
+    setPage,
+    reload,
+    toggle,
   }
-
-  return { ...state, reload, toggle }
 }

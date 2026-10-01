@@ -1,5 +1,6 @@
 import api from './axios.js'
 import { CONVERSATION_ENDPOINTS } from './endpoints.js'
+import { toDateOnly } from '../utils/format.js'
 
 // Conversation routes are workspace-scoped: the backend verifies the signed-in user owns
 // the workspace in this header, and that the conversation belongs to both.
@@ -42,7 +43,7 @@ function toToolRun(toolCall) {
   return {
     id: toolCall.id,
     tool: toolCall.toolName,
-    args: toolCall.arguments ?? {},
+    args: toolCall.arguments?.dueDate ? { ...toolCall.arguments, dueDate: toDateOnly(toolCall.arguments.dueDate) } : (toolCall.arguments ?? {}),
     status: toolCall.status, // success | failed
     result: toolCall.result,
     error: toolCall.errorMessage,

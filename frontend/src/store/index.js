@@ -4,6 +4,8 @@ import { removeStorage, writeStorage } from '../utils/storage.js'
 import authReducer from './slices/authSlice.js'
 import conversationReducer from './slices/conversationSlice.js'
 import documentReducer from './slices/documentSlice.js'
+import taskReducer from './slices/taskSlice.js'
+import toolCallReducer from './slices/toolCallSlice.js'
 import workspaceReducer, { ACTIVE_WORKSPACE_STORAGE_KEY } from './slices/workspaceSlice.js'
 
 export const store = configureStore({
@@ -12,6 +14,8 @@ export const store = configureStore({
     workspace: workspaceReducer,
     document: documentReducer,
     conversation: conversationReducer,
+    task: taskReducer,
+    toolCall: toolCallReducer,
   },
 })
 

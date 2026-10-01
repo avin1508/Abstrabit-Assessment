@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { ListChecks, RefreshCw } from 'lucide-react'
 import { canWrite } from '../utils/permissions.js'
 import useTasks from '../hooks/useTasks.js'
@@ -10,18 +9,12 @@ import TasksTable, { TasksTableSkeleton } from '../components/tasks/TasksTable.j
 import WorkspaceScope from '../components/workspace/WorkspaceScope.jsx'
 import { Alert, Button, Card, EmptyState } from '../components/ui/index.js'
 
-const PAGE_SIZE = 5
-
 export default function TasksPage() {
   const { activeWorkspace: workspace } = useWorkspace()
   const { toast } = useToast()
   const writable = canWrite(workspace)
-  const { tasks, status, error, reload, toggle } = useTasks(workspace.id)
-  const [page, setPage] = useState(1)
-
-  const pageCount = Math.max(1, Math.ceil(tasks.length / PAGE_SIZE))
-  const currentPage = Math.min(page, pageCount)
-  const visible = tasks.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  // One backend page at a time (10 per page).
+  const { tasks, status, error, pagination, setPage, reload, toggle } = useTasks(workspace.id)
   const loading = status === 'loading' && tasks.length === 0
 
   async function handleToggle(task) {
@@ -68,8 +61,8 @@ export default function TasksPage() {
           />
         ) : (
           <>
-            <TasksTable tasks={visible} writable={writable} onToggle={handleToggle} />
-            <Pagination page={currentPage} pageCount={pageCount} onChange={setPage} label="Tasks pages" />
+            <TasksTable tasks={tasks} writable={writable} onToggle={handleToggle} />
+            <Pagination page={pagination.page} pageCount={Math.max(1, pagination.totalPages)} onChange={setPage} label="Tasks pages" />
           </>
         )}
       </Card>

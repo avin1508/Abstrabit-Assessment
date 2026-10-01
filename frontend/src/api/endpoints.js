@@ -25,3 +25,12 @@ export const CONVERSATION_ENDPOINTS = {
   MESSAGES: (id) => `/conversations/${id}/messages`,
   RETRY: (id) => `/conversations/${id}/retry`,
 }
+
+export const TASK_ENDPOINTS = {
+  LIST: '/tasks',
+  UPDATE: (id) => `/tasks/${id}`,
+}
+
+export const TOOL_CALL_ENDPOINTS = {
+  LIST: '/tool-calls',
+}

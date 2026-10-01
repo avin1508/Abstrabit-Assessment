@@ -6,6 +6,8 @@ import authRoutes from './routes/auth.routes.js'
 import workspaceRoutes from './routes/workspace.routes.js'
 import documentRoutes from './routes/document.routes.js'
 import chatRoutes from './routes/chat.routes.js'
+import taskRoutes from './routes/task.routes.js'
+import toolRoutes from './routes/tool.routes.js'
 
 const app = express()
 
@@ -20,6 +22,8 @@ app.use('/api/auth', authRoutes)
 app.use('/api/workspaces', workspaceRoutes)
 app.use('/api/documents', documentRoutes)
 app.use('/api/conversations', chatRoutes)
+app.use('/api/tasks', taskRoutes)
+app.use('/api/tool-calls', toolRoutes)
 
 app.use(notFound)
 app.use(errorHandler)

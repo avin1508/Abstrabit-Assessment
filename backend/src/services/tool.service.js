@@ -134,6 +134,35 @@ export async function executeToolCall({ name, args, context }) {
   }
 }
 
+/*
+ * One page of the (already ownership-verified) workspace's tool calls, newest first, plus
+ * counts per status for the whole workspace. Values are sanitized again on the way out.
+ */
+export async function listToolCalls(workspaceId, { page, limit }) {
+  const [toolCalls, total, grouped] = await Promise.all([
+    ToolCall.find({ workspaceId }).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+    ToolCall.countDocuments({ workspaceId }),
+    ToolCall.aggregate([{ $match: { workspaceId } }, { $group: { _id: '$status', count: { $sum: 1 } } }]),
+  ])
+  const statusCounts = { success: 0, failed: 0 }
+  for (const { _id, count } of grouped) statusCounts[_id] = count
+
+  return {
+    items: toolCalls.map((toolCall) => ({
+      id: toolCall._id.toString(),
+      tool: toolCall.toolName,
+      args: sanitize(toolCall.arguments ?? {}),
+      status: toolCall.status,
+      result: toolCall.result === null ? null : sanitize(toolCall.result),
+      error: toolCall.errorMessage ? sanitize(toolCall.errorMessage) : null,
+      createdAt: toolCall.createdAt,
+      durationMs: toolCall.durationMs,
+    })),
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    statusCounts,
+  }
+}
+
 // Shape returned to the client for a logged tool call.
 export function toToolCallResponse(toolCall) {
   return {

@@ -40,6 +40,12 @@ export function formatDuration(ms) {
   return ms < 60_000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.round(ms / 60_000)} min`
 }
 
+// API dates (full ISO, e.g. "2026-10-03T00:00:00.000Z") -> the calendar date "2026-10-03" that
+// the date helpers below expect. Due dates are stored at UTC midnight of the chosen day.
+export function toDateOnly(value) {
+  return value ? String(value).slice(0, 10) : null
+}
+
 // YYYY-MM-DD in local time (no timezone shift).
 function parseDate(value) {
   const [year, month, day] = value.split('-').map(Number)
