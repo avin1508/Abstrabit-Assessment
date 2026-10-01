@@ -189,6 +189,7 @@ const conversationSlice = createSlice({
         state.thread.messages = [
           ...state.thread.messages.filter((message) => !message.pending),
           action.payload.userMessage,
+          ...action.payload.toolMessages,
           action.payload.assistantMessage,
         ]
         syncConversation(state, conversationId, { bump: true })
@@ -218,7 +219,7 @@ const conversationSlice = createSlice({
         if (!isOpen(state, conversationId)) return
         const messages = state.thread.messages
         if (messages[messages.length - 1]?.role === 'assistant') messages.pop()
-        messages.push(action.payload.assistantMessage)
+        messages.push(...action.payload.toolMessages, action.payload.assistantMessage)
         syncConversation(state, conversationId, { bump: true })
       })
       .addCase(retryMessage.rejected, (state, action) => {

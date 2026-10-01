@@ -1,14 +1,18 @@
-import { GenerationError, generateText } from '../ai/gemini.js'
-import { buildGroundedUserTurn, GROUNDED_SYSTEM_INSTRUCTION, UNKNOWN_ANSWER } from '../ai/prompts.js'
+import { GenerationError, generateChatTurn } from '../ai/gemini.js'
+import { buildGroundedUserTurn, buildSystemInstruction, UNKNOWN_ANSWER } from '../ai/prompts.js'
+import { TOOL_DECLARATIONS } from '../ai/tools.js'
 import { env } from '../config/env.js'
-import { Conversation, Message } from '../models/index.js'
+import { Conversation, Message, ToolCall } from '../models/index.js'
 import { HttpError } from '../utils/httpError.js'
 import { logger } from '../utils/logger.js'
 import { EmbeddingError } from './embedding.service.js'
 import { searchSimilarChunks } from './retrieval.service.js'
+import { executeToolCall, toToolCallResponse } from './tool.service.js'
 
 const RETRIEVAL_LIMIT = 5
 const HISTORY_MESSAGES = 10 // recent messages of this conversation sent as chat history
+const MAX_TOOL_ROUNDS = 3 // model ↔ tool exchanges per question
+const MAX_CALLS_PER_ROUND = 3
 const DEFAULT_TITLE = 'New conversation'
 const EXCERPT_LENGTH = 300
 const ERROR_ANSWER = 'Sorry — I couldn’t generate an answer this time. Please try again.'
@@ -33,13 +37,14 @@ export function toConversationResponse(conversation) {
   }
 }
 
-export function toMessageResponse(message) {
+// `toolCall` (a ToolCall document) is included for role 'tool' messages.
+export function toMessageResponse(message, toolCall = null) {
   return {
     id: message._id.toString(),
     conversationId: message.conversationId.toString(),
     role: message.role,
     status: message.status,
-    content: message.content,
+    content: message.content ?? '',
     citations: (message.citations ?? []).map((citation) => ({
       index: citation.index,
       documentId: citation.documentId.toString(),
@@ -50,8 +55,18 @@ export function toMessageResponse(message) {
       location: citation.location,
       excerpt: citation.excerpt,
     })),
+    toolCallId: message.toolCallId ? message.toolCallId.toString() : null,
+    ...(message.role === 'tool' && { toolCall: toolCall ? toToolCallResponse(toolCall) : null }),
     createdAt: message.createdAt,
   }
+}
+
+// Messages with their tool calls attached (tool calls are loaded in one query).
+async function toMessageResponses(messages) {
+  const ids = messages.filter((message) => message.toolCallId).map((message) => message.toolCallId)
+  const toolCalls = ids.length ? await ToolCall.find({ _id: { $in: ids } }) : []
+  const byId = new Map(toolCalls.map((toolCall) => [toolCall._id.toString(), toolCall]))
+  return messages.map((message) => toMessageResponse(message, byId.get(message.toolCallId?.toString())))
 }
 
 // ---------------------------------------------------------------- conversations
@@ -78,7 +93,7 @@ export async function listConversations(workspaceId, userId) {
 export async function getConversation(workspaceId, userId, conversationId) {
   const conversation = await findConversation(workspaceId, userId, conversationId)
   const messages = await messagesOf(conversation._id)
-  return { conversation: toConversationResponse(conversation), messages: messages.map(toMessageResponse) }
+  return { conversation: toConversationResponse(conversation), messages: await toMessageResponses(messages) }
 }
 
 // ---------------------------------------------------------------- grounded answering
@@ -88,9 +103,10 @@ const isUnknownAnswer = (text) => /^\s*i\s+don['’]?t\s+know\b/i.test(text)
 /*
  * Keeps only the sources the answer actually cites, renumbered 1..n in order of first use,
  * and rewrites the [n] markers to match. Markers for sources that weren't provided are dropped.
- * If the answer cites nothing, every source given to the model is listed.
+ * If a plain answer cites nothing, every source given to the model is listed; after a tool
+ * action (citeAllIfUnmarked = false) an uncited confirmation gets no citations.
  */
-function buildCitations(rawAnswer, sources) {
+function buildCitations(rawAnswer, sources, { citeAllIfUnmarked = true } = {}) {
   // Accept the forms models use — [1], [Source 1], [1, 2], [Sources 1 and 2] — as [1][2].
   const answer = rawAnswer.replace(
     /\[\s*(?:sources?\s*)?(\d+(?:\s*(?:,|and|&)\s*(?:source\s*)?\d+)*)\s*\]/gi,
@@ -101,7 +117,7 @@ function buildCitations(rawAnswer, sources) {
     const index = Number(n)
     if (index >= 1 && index <= sources.length && !order.includes(index)) order.push(index)
   }
-  const used = order.length ? order : sources.map((_, i) => i + 1)
+  const used = order.length || !citeAllIfUnmarked ? order : sources.map((_, i) => i + 1)
   const renumber = new Map(order.map((original, i) => [original, i + 1]))
   const content = answer
     .replace(/\[(\d+)\]/g, (marker, n) => (renumber.has(Number(n)) ? `[${renumber.get(Number(n))}]` : ''))
@@ -124,12 +140,14 @@ function buildCitations(rawAnswer, sources) {
   return { content, citations }
 }
 
-// Earlier user/assistant exchanges of this conversation, as Gemini chat turns.
-// Failed answers (and the questions they belong to) are left out.
+// Earlier user/assistant exchanges of this conversation, as Gemini chat turns. Tool messages
+// are skipped (their outcome is in the assistant's reply); failed answers and the questions
+// they belong to are left out.
 function historyTurns(messages) {
+  const chat = messages.filter((message) => message.role !== 'tool')
   const turns = []
-  for (let i = 0; i < messages.length - 1; i++) {
-    const [question, reply] = [messages[i], messages[i + 1]]
+  for (let i = 0; i < chat.length - 1; i++) {
+    const [question, reply] = [chat[i], chat[i + 1]]
     if (question.role === 'user' && reply.role === 'assistant' && reply.status !== 'error') {
       turns.push({ role: 'user', parts: [{ text: question.content }] }, { role: 'model', parts: [{ text: reply.content }] })
       i++
@@ -138,22 +156,97 @@ function historyTurns(messages) {
   return turns
 }
 
+const stableKey = (name, args) =>
+  `${name}:${JSON.stringify(args && typeof args === 'object' ? Object.fromEntries(Object.entries(args).sort()) : args)}`
+
+// Fallback wording if the model gives no text after running tools.
+function describeOutcome(responses) {
+  return responses
+    .map(({ name, response }) =>
+      response.success
+        ? name === 'create_task'
+          ? `Created the task “${response.title}”.`
+          : 'Sent the summary.'
+        : `I couldn’t complete ${name}: ${response.error}`,
+    )
+    .join(' ')
+}
+
 /*
- * The RAG flow for one question. workspaceId comes from the verified conversation, and
- * retrieval filters by it inside $vectorSearch (retrieval.service.js).
- * Returns { status: 'answer' | 'unknown', content, citations }.
+ * The model ↔ tool loop for one question, bounded to MAX_TOOL_ROUNDS. Each requested call goes
+ * through executeToolCall (validation, authorization, logging); identical calls within the
+ * turn run once. The tool results are sent back to the model, which writes the final reply.
+ * Returns { text, toolCalls } (toolCalls: the ToolCall documents logged during this turn).
+ * On failure the thrown error carries `toolCalls`, so actions that already ran are still shown.
  */
-async function answerQuestion({ workspaceId, question, history }) {
+export async function runToolLoop({ systemInstruction, contents, context, generate = generateChatTurn }) {
+  const toolCalls = []
+  const outcomes = []
+  const seen = new Map()
+  let model
+  try {
+    for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
+      const lastRound = round === MAX_TOOL_ROUNDS
+      const turn = await generate({ systemInstruction, contents, tools: TOOL_DECLARATIONS, toolsDisabled: lastRound, model })
+      model = turn.model
+      if (!turn.functionCalls?.length || lastRound) {
+        return { text: turn.text || describeOutcome(outcomes), toolCalls }
+      }
+
+      contents.push(turn.content ?? { role: 'model', parts: turn.functionCalls.map((call) => ({ functionCall: call })) })
+      const parts = []
+      for (const [i, call] of turn.functionCalls.entries()) {
+        let response
+        if (i >= MAX_CALLS_PER_ROUND) {
+          response = { success: false, error: 'Too many tool calls at once; this one was not run.' }
+        } else {
+          const key = stableKey(call.name, call.args)
+          response = seen.get(key)
+          if (!response) {
+            const outcome = await executeToolCall({ name: call.name, args: call.args, context })
+            if (outcome.toolCall) toolCalls.push(outcome.toolCall)
+            response = outcome.response
+            seen.set(key, response)
+            outcomes.push({ name: call.name, response })
+          }
+        }
+        parts.push({ functionResponse: { ...(call.id && { id: call.id }), name: call.name, response } })
+      }
+      contents.push({ role: 'user', parts })
+    }
+  } catch (error) {
+    // If an action already ran, the user gets a factual confirmation built from the tool
+    // results rather than an error (which would invite repeating the action).
+    if (outcomes.length) {
+      logger.warn('[chat] reply after tool call failed; using the tool results instead')
+      return { text: describeOutcome(outcomes), toolCalls }
+    }
+    error.toolCalls = toolCalls
+    throw error
+  }
+}
+
+/*
+ * The RAG + tools flow for one question. workspaceId comes from the verified conversation;
+ * retrieval filters by it inside $vectorSearch, and tools only ever act on it.
+ * Returns { status: 'answer' | 'unknown', content, citations, toolCalls }.
+ */
+async function answerQuestion({ conversation, userId, question, history, since }) {
+  const workspaceId = conversation.workspaceId
   const results = await searchSimilarChunks({ workspaceId, query: question, limit: RETRIEVAL_LIMIT })
   const sources = results.filter((result) => result.score >= env.ragMinScore)
-  if (sources.length === 0) return { status: 'unknown', content: UNKNOWN_ANSWER, citations: [] }
 
-  const answer = await generateText({
-    systemInstruction: GROUNDED_SYSTEM_INSTRUCTION,
+  const { text, toolCalls } = await runToolLoop({
+    systemInstruction: buildSystemInstruction(),
     contents: [...historyTurns(history), { role: 'user', parts: [{ text: buildGroundedUserTurn(sources, question) }] }],
+    context: { workspaceId, userId, conversationId: conversation._id, since },
   })
-  if (isUnknownAnswer(answer)) return { status: 'unknown', content: UNKNOWN_ANSWER, citations: [] }
-  return { status: 'answer', ...buildCitations(answer, sources) }
+
+  // Without document evidence (and no action taken) the only honest answer is "I don't know."
+  if (!toolCalls.length && (sources.length === 0 || isUnknownAnswer(text))) {
+    return { status: 'unknown', content: UNKNOWN_ANSWER, citations: [], toolCalls }
+  }
+  return { status: 'answer', ...buildCitations(text, sources, { citeAllIfUnmarked: !toolCalls.length }), toolCalls }
 }
 
 // Safe HTTP error for a failed answer; details stay in the server log.
@@ -166,34 +259,45 @@ function toAnswerError(error) {
 }
 
 /*
- * Answers `question`, saves the assistant message (status answer | unknown | error) and bumps
- * the conversation. On failure an error message is saved, then a safe HTTP error is thrown.
+ * Answers the question, saves one 'tool' message per tool call made (linked by toolCallId),
+ * then the assistant message (answer | unknown | error), and bumps the conversation.
+ * On failure the error answer is saved, then a safe HTTP error is thrown.
  */
-async function respond(conversation, question, history) {
+async function respond({ conversation, userId, question, history, since }) {
   let result
   let failure = null
   try {
-    result = await answerQuestion({ workspaceId: conversation.workspaceId, question, history })
+    result = await answerQuestion({ conversation, userId, question, history, since })
   } catch (error) {
     failure = toAnswerError(error)
-    result = { status: 'error', content: ERROR_ANSWER, citations: [] }
+    result = { status: 'error', content: ERROR_ANSWER, citations: [], toolCalls: error.toolCalls ?? [] }
   }
 
+  const base = { conversationId: conversation._id, workspaceId: conversation.workspaceId }
+  const toolMessages = []
+  for (const toolCall of result.toolCalls) {
+    const message = await Message.create({ ...base, role: 'tool', toolCallId: toolCall._id })
+    toolMessages.push(toMessageResponse(message, toolCall))
+  }
   const assistantMessage = await Message.create({
-    conversationId: conversation._id,
-    workspaceId: conversation.workspaceId,
+    ...base,
     role: 'assistant',
-    ...result,
+    status: result.status,
+    content: result.content,
+    citations: result.citations,
   })
   await Conversation.updateOne({ _id: conversation._id }, { $currentDate: { updatedAt: true } })
 
   if (failure) throw failure
-  return assistantMessage
+  return { toolMessages, assistantMessage: toMessageResponse(assistantMessage) }
 }
+
+const recentMessages = async (conversationId, filter = {}) =>
+  (await Message.find({ conversationId, ...filter }).sort({ createdAt: -1, _id: -1 }).limit(HISTORY_MESSAGES)).reverse()
 
 export async function sendMessage({ workspaceId, userId, conversationId, content }) {
   const conversation = await findConversation(workspaceId, userId, conversationId)
-  const history = (await Message.find({ conversationId: conversation._id }).sort({ createdAt: -1, _id: -1 }).limit(HISTORY_MESSAGES)).reverse()
+  const history = await recentMessages(conversation._id)
 
   const userMessage = await Message.create({
     conversationId: conversation._id,
@@ -207,29 +311,39 @@ export async function sendMessage({ workspaceId, userId, conversationId, content
     await Conversation.updateOne({ _id: conversation._id }, { $set: { title } })
   }
 
-  const assistantMessage = await respond(conversation, content, history)
-  return { userMessage: toMessageResponse(userMessage), assistantMessage: toMessageResponse(assistantMessage) }
+  const { toolMessages, assistantMessage } = await respond({
+    conversation,
+    userId,
+    question: content,
+    history,
+    since: userMessage.createdAt,
+  })
+  return { userMessage: toMessageResponse(userMessage), toolMessages, assistantMessage }
 }
 
 /*
  * Re-answers the latest question when its answer failed. The failed assistant message is
- * replaced; the user's message is reused, not duplicated.
+ * replaced; the user's message is reused, not duplicated. Tool calls that already succeeded
+ * for that question are not repeated (tool.service.js checks calls made since the question).
  */
 export async function retryLastMessage({ workspaceId, userId, conversationId }) {
   const conversation = await findConversation(workspaceId, userId, conversationId)
-  const [last, previous] = await Message.find({ conversationId: conversation._id }).sort({ createdAt: -1, _id: -1 }).limit(2)
-  if (last?.role !== 'assistant' || last.status !== 'error' || previous?.role !== 'user') {
+  const [last] = await Message.find({ conversationId: conversation._id }).sort({ createdAt: -1, _id: -1 }).limit(1)
+  const [question] = await Message.find({ conversationId: conversation._id, role: 'user' }).sort({ createdAt: -1, _id: -1 }).limit(1)
+  if (last?.role !== 'assistant' || last.status !== 'error' || !question) {
     throw new HttpError(409, 'There is no failed answer to retry')
   }
   // Atomic: a second concurrent retry finds nothing to delete and stops here.
   const removed = await Message.findOneAndDelete({ _id: last._id, status: 'error' })
   if (!removed) throw new HttpError(409, 'There is no failed answer to retry')
 
-  const history = (
-    await Message.find({ conversationId: conversation._id, _id: { $ne: previous._id } })
-      .sort({ createdAt: -1, _id: -1 })
-      .limit(HISTORY_MESSAGES)
-  ).reverse()
-  const assistantMessage = await respond(conversation, previous.content, history)
-  return { userMessage: toMessageResponse(previous), assistantMessage: toMessageResponse(assistantMessage) }
+  const history = await recentMessages(conversation._id, { createdAt: { $lt: question.createdAt } })
+  const { toolMessages, assistantMessage } = await respond({
+    conversation,
+    userId,
+    question: question.content,
+    history,
+    since: question.createdAt,
+  })
+  return { userMessage: toMessageResponse(question), toolMessages, assistantMessage }
 }

@@ -106,3 +106,18 @@ sources the answer cites `[n]` as the message's citations.
 
 Settings: `GEMINI_CHAT_MODEL` (default `gemini-3.5-flash`), `GEMINI_CHAT_FALLBACK_MODELS` (used when
 the main model is over quota or unavailable) and `RAG_MIN_SCORE` (default `0.78`).
+
+## Tools (Gemini function calling)
+
+The chat model can call exactly two tools, only when the user's own message asks for the action:
+
+| Tool | Arguments (Zod-validated, unknown fields rejected) | Effect |
+|---|---|---|
+| `create_task` | `title`, `description?`, `dueDate?` (ISO date) | Task in the **verified** workspace, `createdBy` = user, `status: open` |
+| `send_summary` | `summary` (no links/scripts, ≤1800 chars), `channel?` (label only) | Posts to `DISCORD_WEBHOOK_URL` (server config; never from the model) |
+
+Flow: model → function call → Zod validation → authorization (workspace owned by the user, conversation in
+that workspace) → execute → result sent back to the model → final reply. At most 3 tool rounds per
+question. Every call (success or failure) is logged in `tool_calls`; secrets are never stored. A tool
+that already succeeded for the same question (e.g. on retry) is not run again. Each executed call is
+shown in the chat as a `tool` message linked by `toolCallId`.
