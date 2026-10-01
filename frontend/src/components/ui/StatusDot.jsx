@@ -9,7 +9,6 @@ const TONES = {
   danger: 'bg-red-500',
 }
 
-// Small colored dot. `pulse` signals in-progress work.
 export default function StatusDot({ tone = 'neutral', pulse = false, className }) {
   return (
     <span className={cn('relative inline-flex size-1.5 shrink-0', className)} aria-hidden>

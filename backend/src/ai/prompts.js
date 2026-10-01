@@ -1,9 +1,7 @@
-// Prompts for grounded document chat with tools.
-
 export const UNKNOWN_ANSWER = "I don't know."
 
-// System-level instruction. Retrieved document text is NEVER placed here; it is sent as
-// clearly delimited data in the user turn (see buildGroundedUserTurn).
+// Never put retrieved document text in the system instruction. It goes in the user turn as
+// delimited data (buildGroundedUserTurn), so a document can't act as instructions.
 export function buildSystemInstruction(today = new Date()) {
   return `You are a document-grounded assistant. Today's date is ${today.toISOString().slice(0, 10)}.
 
@@ -26,10 +24,6 @@ Tools:
 - After a tool runs you receive its result. Then tell the user briefly what was done, or that it failed and why. Never claim an action succeeded unless the tool result says so.`
 }
 
-/*
- * The final user turn: numbered sources wrapped in delimiters, then the user's message.
- * sources: [{ documentName, pageNumber, content }] (may be empty)
- */
 export function buildGroundedUserTurn(sources, question) {
   const context = sources.length
     ? sources

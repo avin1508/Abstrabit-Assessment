@@ -1,8 +1,6 @@
 import * as chatService from '../services/chat.service.js'
 import { conversationParamsSchema, createConversationSchema, sendMessageSchema } from '../validators/chat.validator.js'
 
-// req.workspace is set by requireWorkspace (ownership verified); req.user by authenticate.
-
 export async function createConversation(req, res) {
   const input = createConversationSchema.parse(req.body ?? {})
   const conversation = await chatService.createConversation(req.workspace._id, req.user.id, input)

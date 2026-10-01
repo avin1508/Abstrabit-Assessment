@@ -1,6 +1,5 @@
 // Re-queues indexed documents whose chunks have no embeddings (e.g. ingested before
-// embeddings existed). The running server's ingestion worker re-processes them through the
-// normal pipeline, replacing their chunks with embedded ones.
+// embeddings existed). The running server's worker picks them up.
 // Usage: npm run embeddings:backfill            (re-queue)
 //        npm run embeddings:backfill -- --dry-run   (only report)
 import { connectDB, disconnectDB } from '../config/db.js'

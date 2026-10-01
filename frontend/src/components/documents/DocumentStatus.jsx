@@ -2,7 +2,6 @@ import ProgressBar from '../ui/ProgressBar.jsx'
 import StatusBadge from '../ui/StatusBadge.jsx'
 import { STAGE_LABELS } from './ingestion.js'
 
-// Status badge plus, for processing documents, the stage and progress reported by the worker.
 export default function DocumentStatus({ document, showDetail = true }) {
   const { status, stage, progress } = document
 

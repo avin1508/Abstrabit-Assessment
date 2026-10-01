@@ -3,7 +3,7 @@ import { ZodError } from 'zod'
 import { HttpError } from '../utils/httpError.js'
 import { logger } from '../utils/logger.js'
 
-// Multer error codes -> client-safe responses. Multer deletes any partially written file itself.
+// Multer removes partially written files itself.
 const MULTER_ERRORS = {
   LIMIT_FILE_SIZE: [413, 'File is too large. The maximum size is 20 MB.'],
   LIMIT_FILE_COUNT: [400, 'Upload one file at a time.'],
@@ -14,7 +14,6 @@ export function notFound(req, res) {
   res.status(404).json({ success: false, message: `Route not found: ${req.method} ${req.originalUrl}` })
 }
 
-// Centralized error handler. Hides internal details for 5xx errors.
 // eslint-disable-next-line no-unused-vars
 export function errorHandler(err, req, res, next) {
   if (err instanceof ZodError) {

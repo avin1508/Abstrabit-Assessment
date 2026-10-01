@@ -1,8 +1,5 @@
 import { cn } from '../../utils/cn.js'
 
-/*
- * Label/value pairs. items: [{ label, value, mono? }]; falsy items are skipped.
- */
 export default function DetailList({ items, className }) {
   return (
     <dl className={cn('divide-y divide-line', className)}>

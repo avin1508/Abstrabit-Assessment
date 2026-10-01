@@ -3,7 +3,6 @@ import { ShieldCheck, TriangleAlert } from 'lucide-react'
 import { PATHS } from '../../routes/paths.js'
 import { LogoMark } from '../common/Logo.jsx'
 
-// Start screen for a new conversation.
 export default function ChatEmptyState({ workspace, indexedCount }) {
   return (
     <div className="mx-auto flex max-w-2xl flex-col items-center py-8 text-center sm:py-14">

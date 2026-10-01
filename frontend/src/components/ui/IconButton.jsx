@@ -14,7 +14,6 @@ const SIZES = {
   md: { button: 'size-8.5', icon: 'size-4' },
 }
 
-// Icon-only button. `label` is required: it becomes the accessible name and the tooltip.
 export default function IconButton({
   icon: Icon,
   label,

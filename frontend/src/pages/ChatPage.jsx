@@ -33,7 +33,6 @@ function ThreadSkeleton() {
   )
 }
 
-// The latest answer that has evidence to show — or an honest "no evidence" state.
 function findLatestSourced(messages) {
   for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i]
@@ -49,21 +48,19 @@ export default function ChatPage() {
   const isPhone = useMediaQuery(PHONE)
 
   const chat = useChat({ workspace, userName: user.name })
-  // Indexed documents in this workspace (null until the document list for it has loaded).
   const indexedCount = useSelector((state) =>
     state.document.workspaceId === workspace.id ? state.document.statusCounts.indexed : null,
   )
 
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [panelOpen, setPanelOpen] = useState(true) // ≥ xl side panel
-  const [sourcesDrawerOpen, setSourcesDrawerOpen] = useState(false) // < xl
-  const [selection, setSelection] = useState(null) // { messageId, citation }
+  const [panelOpen, setPanelOpen] = useState(true)
+  const [sourcesDrawerOpen, setSourcesDrawerOpen] = useState(false)
+  const [selection, setSelection] = useState(null)
   const [previewOpen, setPreviewOpen] = useState(false)
 
   // Only messages loaded for the active workspace are candidates — never another workspace's.
   const messages = chat.thread.messages.filter((message) => message.workspaceId === workspace.id)
 
-  // Sources follow the answer the user picked, else the latest answer with (or without) evidence.
   const selectedMessage = messages.find((message) => message.id === selection?.messageId) ?? findLatestSourced(messages)
   const activeSelection = selectedMessage && {
     messageId: selectedMessage.id,
@@ -71,7 +68,6 @@ export default function ChatPage() {
   }
 
 
-  // [n] / source chip / source card → highlight that source and open its preview.
   function openCitation(messageId, citation) {
     setSelection({ messageId, citation })
     setPreviewOpen(true)
@@ -85,7 +81,6 @@ export default function ChatPage() {
     return chat.send(text)
   }
 
-  // "View all sources" → show the answer's sources without a preview.
   function showSources(messageId) {
     setSelection({ messageId, citation: null })
     if (isWide) setPanelOpen(true)

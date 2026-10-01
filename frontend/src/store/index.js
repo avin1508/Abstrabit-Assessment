@@ -19,7 +19,7 @@ export const store = configureStore({
   },
 })
 
-// Keep persisted values in sync with Redux, so reducers stay free of side effects.
+// Persist here so reducers stay free of side effects.
 function persist(key, value) {
   if (value) writeStorage(key, value)
   else removeStorage(key)

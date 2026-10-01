@@ -5,14 +5,11 @@ import { GENERIC_FAILURE, IngestionError, ingestDocument, markDocumentFailed } f
 import { logger } from '../utils/logger.js'
 import { enqueueIngestion, INGESTION_QUEUE_NAME } from './ingestion.queue.js'
 
-// User-facing message for a failure: file problems and AI-service problems carry their own.
 function failureMessage(error) {
   if (error instanceof IngestionError) return error.message
   return error?.userMessage ?? GENERIC_FAILURE
 }
 
-// Runs ingestion for one document. The processing itself lives in ingestion.service.js.
-// Exported for tests.
 export async function processIngestionJob(job) {
   const { documentId } = job.data
   try {
@@ -29,7 +26,7 @@ export async function processIngestionJob(job) {
       logger.error(`[ingestion] document ${documentId} attempt ${job.attemptsMade + 1}:`, error.message)
     }
 
-    // Skip BullMQ's remaining attempts for permanent problems.
+    // Don't burn the remaining BullMQ attempts on a problem retrying can't fix.
     throw permanent ? new UnrecoverableError(error.message) : error
   }
 }

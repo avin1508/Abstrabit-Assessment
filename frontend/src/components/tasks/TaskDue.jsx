@@ -4,7 +4,6 @@ import { dueState, formatDate } from '../../utils/format.js'
 
 const TONES = { danger: 'text-red-600', warning: 'text-amber-700', neutral: 'text-fg-muted' }
 
-// Due date, coloured when an open task is overdue or due soon.
 export default function TaskDue({ task }) {
   if (!task.dueDate) return <span className="text-fg-subtle">No due date</span>
   const state = dueState(task.dueDate, task.status)

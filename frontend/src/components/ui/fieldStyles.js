@@ -1,4 +1,3 @@
-// Shared styling/ARIA helpers for form controls (Input, Textarea, Select).
 export function controlClasses(error) {
   return [
     'block w-full rounded-md border bg-surface text-sm text-fg shadow-xs transition-[border-color,box-shadow] outline-none',

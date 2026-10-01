@@ -2,16 +2,9 @@ import api from './axios.js'
 import { CONVERSATION_ENDPOINTS } from './endpoints.js'
 import { toDateOnly } from '../utils/format.js'
 
-// Conversation routes are workspace-scoped: the backend verifies the signed-in user owns
-// the workspace in this header, and that the conversation belongs to both.
+// The backend checks the user owns this workspace and that the conversation belongs to it.
 const inWorkspace = (workspaceId) => ({ headers: { 'X-Workspace-Id': workspaceId } })
 
-/*
- * Backend message -> the shape the chat components read.
- * `workspaceId` is the workspace the request was made in (backend-verified); the chat UI uses
- * it to drop anything that doesn't belong to the active workspace.
- * Assistant states come straight from the backend: answer | unknown | error.
- */
 export function toChatMessage(message, workspaceId) {
   return {
     id: message.id,
@@ -21,7 +14,6 @@ export function toChatMessage(message, workspaceId) {
     text: message.content ?? '',
     state: message.role === 'assistant' ? message.status : undefined,
     error: message.status === 'error' ? message.content : null,
-    // Tool messages carry the logged tool call, in the shape ToolActivity reads.
     ...(message.role === 'tool' && { run: toToolRun(message.toolCall) }),
     citations: (message.citations ?? []).map((citation) => ({
       index: citation.index,
@@ -44,7 +36,7 @@ function toToolRun(toolCall) {
     id: toolCall.id,
     tool: toolCall.toolName,
     args: toolCall.arguments?.dueDate ? { ...toolCall.arguments, dueDate: toDateOnly(toolCall.arguments.dueDate) } : (toolCall.arguments ?? {}),
-    status: toolCall.status, // success | failed
+    status: toolCall.status,
     result: toolCall.result,
     error: toolCall.errorMessage,
     durationMs: toolCall.durationMs,
@@ -52,7 +44,6 @@ function toToolRun(toolCall) {
   }
 }
 
-// Backend conversation -> sidebar item ({ lastMessage } is filled in once messages are known).
 const toConversation = ({ id, workspaceId, title, createdAt, updatedAt }) => ({ id, workspaceId, title, createdAt, updatedAt })
 
 export async function listConversationsRequest(workspaceId) {
@@ -71,7 +62,6 @@ export async function getConversationRequest(workspaceId, conversationId) {
   return { conversation: toConversation(conversation), messages: messages.map((m) => toChatMessage(m, workspaceId)) }
 }
 
-// Returns { userMessage, toolMessages, assistantMessage } (assistant status: answer | unknown).
 export async function sendMessageRequest(workspaceId, conversationId, content) {
   const response = await api.post(CONVERSATION_ENDPOINTS.MESSAGES(conversationId), { content }, {
     ...inWorkspace(workspaceId),

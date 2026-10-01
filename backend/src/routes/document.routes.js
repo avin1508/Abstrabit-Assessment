@@ -13,7 +13,6 @@ import { requireWorkspace } from '../middleware/workspace.middleware.js'
 
 const router = Router()
 
-// Every route needs a signed-in user and an owned workspace (X-Workspace-Id header).
 // Ownership is checked before Multer runs, so nothing is written for someone else's workspace.
 router.use(authenticate, requireWorkspace)
 

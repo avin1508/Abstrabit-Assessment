@@ -10,8 +10,6 @@ function chunkLabel(document) {
   return '—'
 }
 
-// Compact document row: file, type/size, chunk count, upload time, status.
-// Extra columns appear from `sm`; on phones they fold into the meta line.
 export default function DocumentRow({ document }) {
   return (
     <li className="flex items-center gap-3 px-5 py-3">

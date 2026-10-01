@@ -3,7 +3,6 @@ import StatCard, { StatCardSkeleton } from '../common/StatCard.jsx'
 
 const GRID = 'grid grid-cols-1 gap-3 sm:grid-cols-3'
 
-// The three things the workspace overview is about: its documents, its chat history, its tool calls.
 export default function OverviewStats({ stats, loading }) {
   if (loading) {
     return (

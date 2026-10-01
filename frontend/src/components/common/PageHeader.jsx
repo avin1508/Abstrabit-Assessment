@@ -1,6 +1,5 @@
 import { cn } from '../../utils/cn.js'
 
-// Top-of-page title block. `eyebrow` is an optional small mono label above the title.
 export default function PageHeader({ eyebrow, title, description, actions, className }) {
   return (
     <header className={cn('flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between', className)}>

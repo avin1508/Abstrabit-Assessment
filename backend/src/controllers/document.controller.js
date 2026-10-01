@@ -6,8 +6,6 @@ import {
   searchDocumentsQuerySchema,
 } from '../validators/document.validator.js'
 
-// req.workspace is set by requireWorkspace (ownership already verified).
-
 export async function uploadDocument(req, res) {
   const document = await documentService.createDocument({
     workspaceId: req.workspace._id,
@@ -23,7 +21,6 @@ export async function listDocuments(req, res) {
   res.json({ success: true, data })
 }
 
-// Semantic search over the verified workspace's chunks (retrieval check before chat).
 export async function searchDocuments(req, res) {
   const { q, limit } = searchDocumentsQuerySchema.parse(req.query)
   const results = await searchSimilarChunks({ workspaceId: req.workspace._id, query: q, limit })

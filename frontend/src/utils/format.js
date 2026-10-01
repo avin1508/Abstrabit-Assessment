@@ -7,7 +7,6 @@ const fullDateTime = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', tim
 const compactNumber = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 })
 const plainNumber = new Intl.NumberFormat('en-US')
 
-// "just now", "12m ago", "3h ago", "Yesterday", "4d ago", then "Sep 12".
 export function formatRelativeTime(iso, now = Date.now()) {
   const diff = now - new Date(iso).getTime()
   if (diff < MINUTE) return 'just now'
@@ -22,7 +21,6 @@ export function formatDateTime(iso) {
   return fullDateTime.format(new Date(iso))
 }
 
-// 18432 → "18.4K"; small numbers keep separators (1,874).
 export function formatNumber(value) {
   return value >= 10_000 ? compactNumber.format(value) : plainNumber.format(value)
 }
@@ -40,8 +38,7 @@ export function formatDuration(ms) {
   return ms < 60_000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.round(ms / 60_000)} min`
 }
 
-// API dates (full ISO, e.g. "2026-10-03T00:00:00.000Z") -> the calendar date "2026-10-03" that
-// the date helpers below expect. Due dates are stored at UTC midnight of the chosen day.
+// Due dates are stored at UTC midnight, so take the date part as-is instead of converting.
 export function toDateOnly(value) {
   return value ? String(value).slice(0, 10) : null
 }
@@ -54,17 +51,12 @@ function parseDate(value) {
 
 const dateWithYear = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
-// "Oct 3", or "Oct 3, 2027" outside the current year. Accepts YYYY-MM-DD.
 export function formatDate(value) {
   if (!value) return null
   const date = parseDate(value)
   return date.getFullYear() === new Date().getFullYear() ? shortDate.format(date) : dateWithYear.format(date)
 }
 
-/*
- * Due-date urgency for open work: { tone, label } or null.
- * overdue → danger · today/tomorrow → warning · later → neutral.
- */
 export function dueState(value, status) {
   if (!value || status === 'completed') return null
   const today = new Date()

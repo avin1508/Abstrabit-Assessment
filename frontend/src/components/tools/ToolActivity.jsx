@@ -15,10 +15,6 @@ function headline(run) {
   return run.summary
 }
 
-/*
- * A tool call made by the assistant — deliberately styled as a system/log block, not a message.
- * run: { tool, args, status: pending | running | success | failed | blocked, error, result, createdAt, durationMs }
- */
 export default function ToolActivity({ run, className }) {
   if (!run) return null
   const status = TOOL_STATUS[run.status] ?? TOOL_STATUS.pending

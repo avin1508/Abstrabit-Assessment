@@ -1,5 +1,4 @@
-// localStorage wrappers that never throw (private mode, blocked storage, SSR).
-
+// localStorage can throw (private mode, blocked storage), so these never do.
 export function readStorage(key) {
   try {
     return window.localStorage.getItem(key)

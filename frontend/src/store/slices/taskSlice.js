@@ -6,23 +6,19 @@ import { logout } from './authSlice.js'
 export const TASK_PAGE_SIZE = 10
 
 const initialState = {
-  // The current page of the active workspace's tasks.
   items: [],
   // Workspace the list belongs to, so a response for a previous workspace is never shown.
   workspaceId: null,
   pagination: { page: 1, limit: TASK_PAGE_SIZE, total: 0, totalPages: 0 },
   loading: false,
   error: null,
-  // Tasks with a status change in flight (one request per task at a time).
-  updatingIds: [],
+  updatingIds: [], // one status update per task at a time
   listRequestId: null,
-  // { workspaceId, page } of the list request in flight.
   listQuery: null,
 }
 
 const toRejection = (error) => ({ message: getErrorMessage(error) })
 
-// Callers pass workspaceSlice.activeWorkspaceId (via useWorkspace's activeWorkspace.id).
 export const fetchTasks = createAsyncThunk(
   'task/fetchTasks',
   async ({ workspaceId, page = 1, limit = TASK_PAGE_SIZE }, { rejectWithValue }) => {
@@ -33,7 +29,7 @@ export const fetchTasks = createAsyncThunk(
     }
   },
   {
-    // The same page for the same workspace is never requested twice at once.
+    // Don't request the same page twice at once.
     condition: ({ workspaceId, page = 1 }, { getState }) => {
       const { loading, listQuery } = getState().task
       return !(loading && listQuery?.workspaceId === workspaceId && listQuery.page === page)
@@ -60,7 +56,7 @@ const taskSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchTasks.pending, (state, action) => {
-        // Switching workspace: drop the previous workspace's tasks at once.
+        // Switched workspace: drop the old tasks right away.
         if (action.meta.arg.workspaceId !== state.workspaceId) {
           state.items = []
           state.pagination = { ...initialState.pagination }

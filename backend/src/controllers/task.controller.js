@@ -1,8 +1,6 @@
 import * as taskService from '../services/task.service.js'
 import { paginationQuerySchema, taskParamsSchema, updateTaskSchema } from '../validators/task.validator.js'
 
-// req.workspace is set by requireWorkspace (ownership verified).
-
 export async function listTasks(req, res) {
   const query = paginationQuerySchema.parse(req.query)
   const data = await taskService.listTasks(req.workspace._id, query)

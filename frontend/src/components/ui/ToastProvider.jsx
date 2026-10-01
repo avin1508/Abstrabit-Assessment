@@ -23,7 +23,6 @@ export default function ToastProvider({ children }) {
     setToasts((current) => current.filter((toast) => toast.id !== id))
   }, [])
 
-  // tone: neutral | info | success | warning | danger | loading. duration: ms, or 0 to persist.
   const toast = useCallback(
     ({ title, description, tone = 'neutral', duration = DEFAULT_DURATION }) => {
       const id = ++nextId.current

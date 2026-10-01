@@ -1,7 +1,6 @@
 import { Task } from '../models/index.js'
 import { HttpError } from '../utils/httpError.js'
 
-// Safe task data for the client.
 export function toTaskResponse(task) {
   return {
     id: task._id.toString(),
@@ -33,7 +32,6 @@ export async function createTask({ workspaceId, userId, title, description, dueD
   }
 }
 
-// One page of the (already ownership-verified) workspace's tasks, newest first.
 export async function listTasks(workspaceId, { page, limit }) {
   const [tasks, total] = await Promise.all([
     Task.find({ workspaceId }).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * limit).limit(limit),
@@ -45,7 +43,7 @@ export async function listTasks(workspaceId, { page, limit }) {
   }
 }
 
-// Only the status can change. A task outside the workspace is "not found".
+// Scoped by workspace: a task from another workspace is "not found".
 export async function updateTaskStatus(workspaceId, taskId, status) {
   const task = await Task.findOneAndUpdate({ _id: taskId, workspaceId }, { $set: { status } }, { new: true })
   if (!task) throw new HttpError(404, 'Task not found')

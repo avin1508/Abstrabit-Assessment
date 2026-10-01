@@ -1,10 +1,7 @@
 import { cn } from '../../utils/cn.js'
 
-// Label + hint/error wrapper shared by Input, Textarea and Select.
-// `labelAction` renders on the right of the label row (e.g. a "Forgot password?" link).
-// `floatingMessage` places the hint/error in the gap below the field instead of adding height,
-// so messages appearing or disappearing don't shift the rest of the form. It needs about
-// 20px of space below the field (a `space-y-6` parent leaves a little air) and fits one line.
+// `floatingMessage` puts the hint/error in the gap below the field so the form doesn't jump
+// when it appears. Needs ~20px below the field and fits one line.
 export default function Field({ id, label, labelAction, hint, error, required, floatingMessage, className, children }) {
   const messageClass = floatingMessage ? 'absolute inset-x-0 top-full mt-1 truncate text-xs' : 'mt-1.5 text-xs'
 

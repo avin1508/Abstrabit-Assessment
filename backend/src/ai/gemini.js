@@ -9,19 +9,16 @@ export const EMBEDDING_DIMENSIONS = 768
 // The API accepts at most 100 texts per embedding request.
 export const EMBEDDING_BATCH_SIZE = 100
 
-// Chat models in the order they are tried: GEMINI_CHAT_MODEL, then GEMINI_CHAT_FALLBACK_MODELS.
 export const CHAT_MODELS = [...new Set([env.geminiChatModel, ...env.geminiChatFallbackModels])]
 
 let client = null
 
-// Server-side Gemini client; null when GEMINI_API_KEY isn't configured.
 export function getGeminiClient() {
   if (!env.geminiApiKey) return null
   client ??= new GoogleGenAI({ apiKey: env.geminiApiKey })
   return client
 }
 
-// A text-generation failure with a message that is safe to show users.
 export class GenerationError extends Error {
   constructor(message) {
     super(message)
@@ -32,35 +29,25 @@ export class GenerationError extends Error {
 
 const isTemporary = (error) => {
   const status = error?.status ?? error?.code
-  // No status: network failure. 429: quota/rate limit. 5xx: overloaded or down.
+  // No status means a network error; 429 is quota, 5xx is the model being overloaded.
   return status === undefined || status === 429 || status >= 500
 }
 
-// Visible answer text of a response (thought parts excluded).
 const textOf = (content) =>
   (content?.parts ?? [])
+    // Thinking models also return thought parts; only the visible text counts.
     .filter((part) => typeof part.text === 'string' && !part.thought)
     .map((part) => part.text)
     .join('')
     .trim()
 
-/*
- * One model turn. The system instruction is passed separately from the conversation contents,
- * so nothing in the contents can act as a system instruction.
- *
- * tools: function declarations the model may call. toolsDisabled keeps them declared but
- * forbids calling them (used for the last round of the tool loop).
- * Returns { model, content, text, functionCalls }.
- *
- * Without `model`, models are tried in order (CHAT_MODELS): when one is over quota, overloaded
- * or unavailable, the next one is used. Later rounds of the same turn pass `model` so the whole
- * turn stays on one model. Throws GenerationError with a safe message if none can answer.
- */
 export async function generateChatTurn({ systemInstruction, contents, tools, toolsDisabled = false, model }) {
   const ai = getGeminiClient()
   if (!ai) throw new GenerationError('AI features aren’t configured on the server.')
 
   let anyTemporary = false
+  // Fall through to the next model on quota/overload. Later rounds of a tool loop pass
+  // `model` so the whole turn stays on one model.
   for (const candidate of model ? [model] : CHAT_MODELS) {
     try {
       const response = await ai.models.generateContent({

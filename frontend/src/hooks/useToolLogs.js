@@ -2,10 +2,6 @@ import { useCallback, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { fetchToolCalls, TOOL_CALL_PAGE_SIZE } from '../store/slices/toolCallSlice.js'
 
-/*
- * The active workspace's tool call log, one backend page at a time, from toolCallSlice.
- * status: loading | error | success
- */
 export default function useToolLogs(workspaceId) {
   const dispatch = useDispatch()
   const state = useSelector((root) => root.toolCall)

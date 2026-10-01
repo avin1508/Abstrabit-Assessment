@@ -3,11 +3,6 @@ import ToolActivity from '../tools/ToolActivity.jsx'
 import AssistantMessage from './AssistantMessage.jsx'
 import UserMessage from './UserMessage.jsx'
 
-/*
- * Renders a conversation: user question → tool activity (if any) → assistant answer.
- * Tool blocks are indented under the assistant column so they read as actions, not replies.
- * Scrolls to the newest content whenever the thread changes.
- */
 export default function ChatThread({ messages, workspaceName, selection, onSelectCitation, onShowSources, onRetry, busy }) {
   const endRef = useRef(null)
   const last = messages[messages.length - 1]

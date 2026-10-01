@@ -6,11 +6,6 @@ const SIZES = {
   md: 'h-5 min-w-5 px-1 text-[11px]',
 }
 
-/*
- * Numbered citation marker, e.g. the [1] after a claim. The same visual is used in the answer,
- * on source chips, in the Sources panel and in the preview, so [1] ↔ source 1 reads as one thing.
- * Renders a button when `onClick` is given, otherwise a static label.
- */
 export default function CitationBadge({ index, active = false, onClick, label, size = 'sm', className }) {
   const classes = cn(
     'inline-flex shrink-0 items-center justify-center rounded font-mono font-semibold tabular-nums ring-1 ring-inset transition-colors',

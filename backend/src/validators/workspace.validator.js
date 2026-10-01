@@ -1,7 +1,6 @@
 import { z } from 'zod'
 
-// Only `name` is read from the client. Unknown keys (such as ownerId) are stripped;
-// the owner always comes from the verified JWT.
+// ownerId is stripped; the owner always comes from the JWT.
 export const createWorkspaceSchema = z.object({
   name: z
     .string({ error: 'Workspace name is required' })

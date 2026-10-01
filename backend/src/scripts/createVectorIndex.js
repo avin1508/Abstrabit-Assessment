@@ -36,7 +36,6 @@ async function main() {
     logger.info(`Created index "${VECTOR_INDEX_NAME}":`, JSON.stringify(VECTOR_INDEX_DEFINITION))
   }
 
-  // Wait until Atlas has built it (usually under a minute).
   for (let i = 0; i < 60; i++) {
     const [index] = await collection.listSearchIndexes(VECTOR_INDEX_NAME).toArray()
     if (index?.queryable) {

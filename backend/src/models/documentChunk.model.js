@@ -1,7 +1,6 @@
 import mongoose from 'mongoose'
 
-// workspaceId is stored on every chunk so vector search can filter by tenant.
-// The Atlas Vector Search index (path "embedding", filter "workspaceId") is created in Atlas.
+// workspaceId is stored on every chunk so vector search can filter by workspace.
 const documentChunkSchema = new mongoose.Schema(
   {
     workspaceId: {

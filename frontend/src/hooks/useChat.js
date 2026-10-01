@@ -10,13 +10,6 @@ import {
   sendMessage,
 } from '../store/slices/conversationSlice.js'
 
-/*
- * Chat for the active workspace, backed by conversationSlice and the real API.
- * - The open conversation lives in the URL (?conversation=<id>).
- * - `workspace` is the active workspace (workspaceSlice.activeWorkspaceId); every request
- *   sends it, and chat state is reset whenever it changes (ChatPage remounts per workspace).
- * - Conversations the backend doesn't return for this workspace bounce back with a notice.
- */
 export default function useChat({ workspace }) {
   const dispatch = useDispatch()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -37,9 +30,8 @@ export default function useChat({ workspace }) {
   })
   const busy = sending || retrying || creating
 
-  // Fresh chat state for this workspace; nothing from another workspace is ever shown.
-  // On the first load without ?conversation, the most recent conversation (if any) is opened,
-  // using this request's own result rather than whatever list is in the store.
+  // Reset chat on workspace change. Without ?conversation, open the most recent one from this
+  // request's result, not whatever list is still in the store.
   useEffect(() => {
     dispatch(resetChat())
     const request = dispatch(fetchConversations({ workspaceId }))
@@ -59,7 +51,6 @@ export default function useChat({ workspace }) {
     }
   }, [workspaceId, dispatch])
 
-  // Load the conversation in the URL.
   useEffect(() => {
     if (!activeId || thread.conversationId === activeId) return
     dispatch(fetchConversation({ workspaceId, conversationId: activeId }))
@@ -81,7 +72,6 @@ export default function useChat({ workspace }) {
     }
   }
 
-  // Sends a question (creating the conversation first if none is open). Resolves true on success.
   async function send(text) {
     const content = text.trim()
     if (!content || busy) return false
@@ -101,7 +91,6 @@ export default function useChat({ workspace }) {
     }
   }
 
-  // Titles (set by the backend from the first question) and order come from the server.
   function refreshList() {
     dispatch(fetchConversations({ workspaceId }))
   }
@@ -125,7 +114,7 @@ export default function useChat({ workspace }) {
     setSearchParams({ conversation: conversationId })
   }
 
-  // Creates a new conversation, unless the open one is still empty.
+  // Don't create another conversation while the open one is still empty.
   async function newConversation() {
     setNotice(null)
     if (busy || (activeId && thread.conversationId === activeId && thread.messages.length === 0)) return
@@ -136,7 +125,6 @@ export default function useChat({ workspace }) {
     }
   }
 
-  // What the UI should render: 'new' (empty state) | 'loading' | 'ready'.
   const threadLoaded = activeId && thread.conversationId === activeId && thread.status === 'ready'
   let view
   if (!activeId) {

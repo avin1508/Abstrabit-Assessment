@@ -4,8 +4,6 @@ import { HttpError } from '../utils/httpError.js'
 import { listDocuments } from './document.service.js'
 import { listToolCalls } from './tool.service.js'
 
-// Workspaces have a single owner; there is no membership system. `role` is a display value
-// the frontend shows in the workspace switcher.
 function toWorkspaceResponse(workspace, documentCount = 0) {
   return {
     id: workspace._id.toString(),
@@ -23,12 +21,11 @@ export async function createWorkspace(ownerId, { name }) {
   return toWorkspaceResponse(workspace)
 }
 
-// Only the caller's workspaces, oldest first (the one created at registration comes first).
 export async function getUserWorkspaces(ownerId) {
   const workspaces = await Workspace.find({ ownerId }).sort({ createdAt: 1 }).lean()
   if (workspaces.length === 0) return []
 
-  // One grouped query for all document counts instead of one query per workspace.
+  // One grouped query instead of a count per workspace.
   const counts = await Document.aggregate([
     { $match: { workspaceId: { $in: workspaces.map((workspace) => workspace._id) } } },
     { $group: { _id: '$workspaceId', count: { $sum: 1 } } },
@@ -55,8 +52,6 @@ const RECENT_DOCUMENTS = 5
 const RECENT_CONVERSATIONS = 4
 const RECENT_TOOL_RUNS = 5
 
-// Latest chat message of a conversation (tool messages skipped) and whether its latest answer
-// was grounded, for the dashboard preview.
 async function lastMessageOf(conversationId) {
   const [last, lastAnswer] = await Promise.all([
     Message.findOne({ conversationId, role: { $ne: 'tool' } }).sort({ createdAt: -1, _id: -1 }).lean(),
@@ -66,11 +61,6 @@ async function lastMessageOf(conversationId) {
   return { role: last.role, status: last.status ?? null, content: last.content ?? '', grounded: lastAnswer?.status !== 'unknown' }
 }
 
-/*
- * Dashboard overview for one (already ownership-verified) workspace: counts plus the most
- * recent documents, conversations and tool calls. Everything is read for this workspace only,
- * reusing the document and tool-call list services.
- */
 export async function getWorkspaceOverview(workspaceId) {
   const [documents, toolCalls, conversationCount, conversations] = await Promise.all([
     listDocuments(workspaceId, { page: 1, limit: RECENT_DOCUMENTS }),

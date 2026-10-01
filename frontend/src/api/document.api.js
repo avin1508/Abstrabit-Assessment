@@ -1,8 +1,6 @@
 import api from './axios.js'
 import { DOCUMENT_ENDPOINTS } from './endpoints.js'
 
-// Document routes are workspace-scoped: the backend reads the workspace from this header
-// and verifies the signed-in user owns it.
 const inWorkspace = (workspaceId) => ({ headers: { 'X-Workspace-Id': workspaceId } })
 
 function extensionOf(name) {
@@ -10,10 +8,6 @@ function extensionOf(name) {
   return match ? match[1].toLowerCase() : ''
 }
 
-/*
- * Processing state as the UI reads it. processingStage is the current stage while
- * processing and the stage that failed when failed; progress (0–100) comes from the worker.
- */
 export function toProcessingState({ status, processingStage, progress, errorMessage }) {
   return {
     status,
@@ -24,7 +18,6 @@ export function toProcessingState({ status, processingStage, progress, errorMess
   }
 }
 
-// Backend document -> the shape the Documents UI reads. Chunk counts aren't returned by the API.
 function toDocument(document) {
   return {
     id: document.id,
@@ -40,7 +33,6 @@ function toDocument(document) {
   }
 }
 
-// One page of documents. status 'all' and an empty search mean "no filter".
 export async function listDocumentsRequest(workspaceId, { page, limit, status, search }) {
   const params = { page, limit }
   if (status && status !== 'all') params.status = status
@@ -51,14 +43,12 @@ export async function listDocumentsRequest(workspaceId, { page, limit, status, s
   return { documents: documents.map(toDocument), pagination, statusCounts }
 }
 
-// Lightweight processing state for one document: { id, status, stage, failedStage, progress, error }.
 export async function getDocumentStatusRequest(workspaceId, documentId) {
   const response = await api.get(DOCUMENT_ENDPOINTS.STATUS(documentId), inWorkspace(workspaceId))
   const { status } = response.data.data
   return { id: status.id, ...toProcessingState(status) }
 }
 
-// onProgress receives 0–100 from the browser's real upload progress events.
 export async function uploadDocumentRequest(workspaceId, file, onProgress) {
   const form = new FormData()
   form.append('file', file)

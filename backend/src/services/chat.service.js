@@ -10,8 +10,8 @@ import { searchSimilarChunks } from './retrieval.service.js'
 import { executeToolCall, toToolCallResponse } from './tool.service.js'
 
 const RETRIEVAL_LIMIT = 5
-const HISTORY_MESSAGES = 10 // recent messages of this conversation sent as chat history
-const MAX_TOOL_ROUNDS = 3 // model ↔ tool exchanges per question
+const HISTORY_MESSAGES = 10
+const MAX_TOOL_ROUNDS = 3
 const MAX_CALLS_PER_ROUND = 3
 const DEFAULT_TITLE = 'New conversation'
 const EXCERPT_LENGTH = 300
@@ -24,8 +24,6 @@ const FILE_TYPES = {
   'text/plain': 'txt',
 }
 
-// ---------------------------------------------------------------- responses
-
 export function toConversationResponse(conversation) {
   return {
     id: conversation._id.toString(),
@@ -37,7 +35,6 @@ export function toConversationResponse(conversation) {
   }
 }
 
-// `toolCall` (a ToolCall document) is included for role 'tool' messages.
 export function toMessageResponse(message, toolCall = null) {
   return {
     id: message._id.toString(),
@@ -61,15 +58,12 @@ export function toMessageResponse(message, toolCall = null) {
   }
 }
 
-// Messages with their tool calls attached (tool calls are loaded in one query).
 async function toMessageResponses(messages) {
   const ids = messages.filter((message) => message.toolCallId).map((message) => message.toolCallId)
   const toolCalls = ids.length ? await ToolCall.find({ _id: { $in: ids } }) : []
   const byId = new Map(toolCalls.map((toolCall) => [toolCall._id.toString(), toolCall]))
   return messages.map((message) => toMessageResponse(message, byId.get(message.toolCallId?.toString())))
 }
-
-// ---------------------------------------------------------------- conversations
 
 // A conversation is visible only to its user, inside its (already verified) workspace.
 async function findConversation(workspaceId, userId, conversationId) {
@@ -96,16 +90,8 @@ export async function getConversation(workspaceId, userId, conversationId) {
   return { conversation: toConversationResponse(conversation), messages: await toMessageResponses(messages) }
 }
 
-// ---------------------------------------------------------------- grounded answering
-
 const isUnknownAnswer = (text) => /^\s*i\s+don['’]?t\s+know\b/i.test(text)
 
-/*
- * Keeps only the sources the answer actually cites, renumbered 1..n in order of first use,
- * and rewrites the [n] markers to match. Markers for sources that weren't provided are dropped.
- * If a plain answer cites nothing, every source given to the model is listed; after a tool
- * action (citeAllIfUnmarked = false) an uncited confirmation gets no citations.
- */
 function buildCitations(rawAnswer, sources, { citeAllIfUnmarked = true } = {}) {
   // Accept the forms models use — [1], [Source 1], [1, 2], [Sources 1 and 2] — as [1][2].
   const answer = rawAnswer.replace(
@@ -117,6 +103,8 @@ function buildCitations(rawAnswer, sources, { citeAllIfUnmarked = true } = {}) {
     const index = Number(n)
     if (index >= 1 && index <= sources.length && !order.includes(index)) order.push(index)
   }
+  // Nothing cited: list every source for a normal answer, but none for a tool
+  // confirmation (it isn't based on the documents).
   const used = order.length || !citeAllIfUnmarked ? order : sources.map((_, i) => i + 1)
   const renumber = new Map(order.map((original, i) => [original, i + 1]))
   const content = answer
@@ -159,7 +147,7 @@ function historyTurns(messages) {
 const stableKey = (name, args) =>
   `${name}:${JSON.stringify(args && typeof args === 'object' ? Object.fromEntries(Object.entries(args).sort()) : args)}`
 
-// Fallback wording if the model gives no text after running tools.
+// Used when the model runs a tool but then returns no text.
 function describeOutcome(responses) {
   return responses
     .map(({ name, response }) =>
@@ -172,16 +160,10 @@ function describeOutcome(responses) {
     .join(' ')
 }
 
-/*
- * The model ↔ tool loop for one question, bounded to MAX_TOOL_ROUNDS. Each requested call goes
- * through executeToolCall (validation, authorization, logging); identical calls within the
- * turn run once. The tool results are sent back to the model, which writes the final reply.
- * Returns { text, toolCalls } (toolCalls: the ToolCall documents logged during this turn).
- * On failure the thrown error carries `toolCalls`, so actions that already ran are still shown.
- */
 export async function runToolLoop({ systemInstruction, contents, context, generate = generateChatTurn }) {
   const toolCalls = []
   const outcomes = []
+  // The model sometimes repeats the same call in one turn; run it once.
   const seen = new Map()
   let model
   try {
@@ -221,16 +203,12 @@ export async function runToolLoop({ systemInstruction, contents, context, genera
       logger.warn('[chat] reply after tool call failed; using the tool results instead')
       return { text: describeOutcome(outcomes), toolCalls }
     }
+    // Attach what already ran so the UI still shows those actions after a failure.
     error.toolCalls = toolCalls
     throw error
   }
 }
 
-/*
- * The RAG + tools flow for one question. workspaceId comes from the verified conversation;
- * retrieval filters by it inside $vectorSearch, and tools only ever act on it.
- * Returns { status: 'answer' | 'unknown', content, citations, toolCalls }.
- */
 async function answerQuestion({ conversation, userId, question, history, since }) {
   const workspaceId = conversation.workspaceId
   const results = await searchSimilarChunks({ workspaceId, query: question, limit: RETRIEVAL_LIMIT })
@@ -242,14 +220,14 @@ async function answerQuestion({ conversation, userId, question, history, since }
     context: { workspaceId, userId, conversationId: conversation._id, since },
   })
 
-  // Without document evidence (and no action taken) the only honest answer is "I don't know."
+  // No evidence and no action taken: answer "I don't know." instead of guessing.
   if (!toolCalls.length && (sources.length === 0 || isUnknownAnswer(text))) {
     return { status: 'unknown', content: UNKNOWN_ANSWER, citations: [], toolCalls }
   }
   return { status: 'answer', ...buildCitations(text, sources, { citeAllIfUnmarked: !toolCalls.length }), toolCalls }
 }
 
-// Safe HTTP error for a failed answer; details stay in the server log.
+// Real error details stay in the server log.
 function toAnswerError(error) {
   if (error instanceof GenerationError) return new HttpError(502, error.userMessage)
   if (error instanceof EmbeddingError) return new HttpError(error.retryable ? 503 : 502, error.userMessage)
@@ -258,11 +236,6 @@ function toAnswerError(error) {
   return new HttpError(500, 'Something went wrong while answering. Try again.')
 }
 
-/*
- * Answers the question, saves one 'tool' message per tool call made (linked by toolCallId),
- * then the assistant message (answer | unknown | error), and bumps the conversation.
- * On failure the error answer is saved, then a safe HTTP error is thrown.
- */
 async function respond({ conversation, userId, question, history, since }) {
   let result
   let failure = null
@@ -305,7 +278,6 @@ export async function sendMessage({ workspaceId, userId, conversationId, content
     role: 'user',
     content,
   })
-  // Name untitled conversations after their first question.
   if (!conversation.title || conversation.title === DEFAULT_TITLE) {
     const title = content.length > 60 ? `${content.slice(0, 57).trimEnd()}…` : content
     await Conversation.updateOne({ _id: conversation._id }, { $set: { title } })
@@ -321,11 +293,7 @@ export async function sendMessage({ workspaceId, userId, conversationId, content
   return { userMessage: toMessageResponse(userMessage), toolMessages, assistantMessage }
 }
 
-/*
- * Re-answers the latest question when its answer failed. The failed assistant message is
- * replaced; the user's message is reused, not duplicated. Tool calls that already succeeded
- * for that question are not repeated (tool.service.js checks calls made since the question).
- */
+// Tools that already succeeded for this question aren't run again (see tool.service.js).
 export async function retryLastMessage({ workspaceId, userId, conversationId }) {
   const conversation = await findConversation(workspaceId, userId, conversationId)
   const [last] = await Message.find({ conversationId: conversation._id }).sort({ createdAt: -1, _id: -1 }).limit(1)

@@ -7,10 +7,7 @@ import LoadingSpinner from '../ui/LoadingSpinner.jsx'
 
 const MAX_HEIGHT = 200
 
-/*
- * Message composer. Enter sends, Shift+Enter adds a line.
- * `onSend(text)` may return a promise resolving to false to keep the draft (e.g. on failure).
- */
+// onSend can resolve to false to keep the draft (e.g. when sending failed).
 export default function ChatInput({ onSend, busy = false, disabled = false, placeholder, footnote }) {
   const [value, setValue] = useState('')
   const textareaRef = useRef(null)

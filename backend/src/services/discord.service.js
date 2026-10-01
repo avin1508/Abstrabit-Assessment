@@ -10,11 +10,6 @@ export class DiscordError extends Error {
   }
 }
 
-/*
- * Posts a message to the server-configured DISCORD_WEBHOOK_URL. The destination is never
- * chosen by the caller, the model or a document. Mentions (@everyone, roles, users) are disabled.
- * Returns { messageId } from Discord.
- */
 export async function sendDiscordMessage(content) {
   let url
   try {
@@ -30,7 +25,7 @@ export async function sendDiscordMessage(content) {
     response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content, allowed_mentions: { parse: [] } }),
+      body: JSON.stringify({ content, allowed_mentions: { parse: [] } }), // no @everyone / role / user pings
       signal: AbortSignal.timeout(TIMEOUT_MS),
     })
   } catch {

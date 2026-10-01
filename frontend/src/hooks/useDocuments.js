@@ -8,16 +8,9 @@ import {
   retryDocument,
 } from '../store/slices/documentSlice.js'
 
-// How often the status of each processing document is checked.
 const STATUS_POLL_MS = 2500
 const NO_FILTERS = { status: 'all', search: '' }
 
-/*
- * The active workspace's documents, one backend page at a time, from documentSlice.
- * AppLayout loads page 1 whenever workspaceSlice.activeWorkspaceId changes; this hook adds
- * paging/filtering, progress polling and the page actions.
- * status: loading | error | success
- */
 export default function useDocuments(workspaceId) {
   const dispatch = useDispatch()
   const state = useSelector((root) => root.document)
@@ -29,7 +22,6 @@ export default function useDocuments(workspaceId) {
   const pagination = current ? state.pagination : { page: 1, limit: PAGE_SIZE, total: 0, totalPages: 0 }
   const filters = current ? state.filters : NO_FILTERS
 
-  // Fetch a page with the given changes; filter changes go back to page 1.
   const load = useCallback(
     (changes = {}) => dispatch(fetchDocuments({ workspaceId, limit: pagination.limit, ...filters, page: pagination.page, ...changes })),
     [dispatch, workspaceId, pagination.limit, pagination.page, filters],
@@ -41,7 +33,7 @@ export default function useDocuments(workspaceId) {
   const clearFilters = useCallback(() => load({ status: 'all', search: '', page: 1 }), [load])
   const reload = useCallback(() => load(), [load])
 
-  // Poll only documents that are still processing; stops once each is indexed or failed.
+  // Only poll documents that are still processing.
   const processingIds = documents.filter((document) => document.status === 'processing').map((document) => document.id)
   const processingKey = processingIds.join(',')
   useEffect(() => {
@@ -61,11 +53,10 @@ export default function useDocuments(workspaceId) {
     }
   }, [current, state.loading, state.error, documents.length, page, total, totalPages, load])
 
-  // Both resolve with the result or throw { message } for the caller to show.
   const retry = (documentId) => dispatch(retryDocument({ workspaceId, documentId })).unwrap()
   const remove = async (documentId) => {
     await dispatch(deleteDocument({ workspaceId, documentId })).unwrap()
-    load() // refill the page and refresh totals
+    load()
   }
 
   return {

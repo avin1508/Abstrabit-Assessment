@@ -5,8 +5,7 @@ import { requireWorkspace } from '../middleware/workspace.middleware.js'
 
 const router = Router()
 
-// Signed-in user + owned workspace (X-Workspace-Id header). Tasks are created only by the
-// assistant's create_task tool, so there is no create route.
+// No create route: tasks are only created by the assistant's create_task tool.
 router.use(authenticate, requireWorkspace)
 
 router.get('/', listTasks)

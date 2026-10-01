@@ -1,8 +1,7 @@
 import { z } from 'zod'
 
-// Tool arguments come from the model, so they are untrusted. These schemas are the security
-// boundary for tool input: unknown fields (e.g. workspaceId, a webhook URL) are rejected
-// outright, and nothing runs unless validation passes.
+// Tool args come from the model, so treat them as untrusted. Strict schemas reject extra
+// fields like workspaceId or a webhook URL.
 
 const URL_PATTERN = /\b(?:https?|ftp|file|javascript|data):|\bwww\.|discord(?:app)?\.com\/api\/webhooks/i
 const SCRIPT_PATTERN = /<\s*\/?\s*(?:script|iframe|object|embed)\b|\bon\w+\s*=/i
@@ -13,7 +12,6 @@ export const createTaskSchema = z
   .object({
     title: z.string().trim().min(1, { error: 'title is required' }).max(200, { error: 'title must be at most 200 characters' }),
     description: z.string().trim().max(2000, { error: 'description must be at most 2000 characters' }).optional(),
-    // A calendar date (2026-10-03) or a full ISO date-time.
     dueDate: z.union([z.iso.date(), z.iso.datetime({ offset: true })], { error: 'dueDate must be an ISO 8601 date' }).optional(),
   })
   .strict()

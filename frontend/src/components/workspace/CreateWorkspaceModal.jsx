@@ -14,7 +14,6 @@ function validate({ name }) {
   return {}
 }
 
-// Creates the workspace (POST /api/workspaces) and makes it the active one.
 export default function CreateWorkspaceModal({ open, onClose }) {
   const { toast } = useToast()
   const { addWorkspace } = useWorkspace()

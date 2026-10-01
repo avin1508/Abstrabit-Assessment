@@ -13,7 +13,6 @@ export default function TasksPage() {
   const { activeWorkspace: workspace } = useWorkspace()
   const { toast } = useToast()
   const writable = canWrite(workspace)
-  // One backend page at a time (10 per page).
   const { tasks, status, error, pagination, setPage, reload, toggle } = useTasks(workspace.id)
   const loading = status === 'loading' && tasks.length === 0
 

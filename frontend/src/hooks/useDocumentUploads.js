@@ -5,13 +5,6 @@ import { getFileExtension, validateUploadFile } from '../utils/fileValidation.js
 
 const CLEAR_DONE_AFTER_MS = 4000
 
-/*
- * The visible upload list for the Documents page (UI state only).
- * Each entry: { id, name, size, type, status: queued | uploading | done | rejected | error, progress, error }
- * Invalid files are rejected immediately. Valid ones upload one at a time through
- * documentSlice.uploadDocument; the uploading entry shows the real progress from Redux.
- * onUploaded(document) runs after each successful upload.
- */
 export default function useDocumentUploads({ workspaceId, onUploaded }) {
   const dispatch = useDispatch()
   const uploadProgress = useSelector((state) => state.document.uploadProgress)
@@ -19,7 +12,7 @@ export default function useDocumentUploads({ workspaceId, onUploaded }) {
   const nextId = useRef(0)
   const queue = useRef([])
   const running = useRef(false)
-  // Latest callback, so an upload loop started earlier never calls an outdated one.
+  // Ref so an upload loop started earlier always calls the latest callback.
   const onUploadedRef = useRef(onUploaded)
   useEffect(() => {
     onUploadedRef.current = onUploaded

@@ -7,9 +7,8 @@ import { HttpError } from '../utils/httpError.js'
 
 export const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
 
-// Allowed types by extension (the same list the frontend accepts). Browsers often send
-// generic MIME types for .md/.txt, so those are accepted too. `mimeType` is what gets stored,
-// never the client's value.
+// Browsers often send generic MIME types for .md/.txt, so those are accepted too.
+// We store our own `mimeType`, never the one the client sent.
 const FILE_TYPES = {
   '.pdf': {
     mimeType: 'application/pdf',
@@ -55,8 +54,7 @@ function requireFile(req, res, next) {
   next()
 }
 
-// Checks the file content matches its extension (e.g. a renamed .exe isn't accepted as .pdf)
-// and records the server-side MIME type on req.file.
+// Check the file content matches its extension, so a renamed .exe can't pass as a .pdf.
 async function verifyFileContent(req, res, next) {
   const type = FILE_TYPES[path.extname(req.file.originalname).toLowerCase()]
   const head = Buffer.alloc(8192)
@@ -78,5 +76,4 @@ async function verifyFileContent(req, res, next) {
   next()
 }
 
-// Single file in the "file" field, max 20 MB, supported types only.
 export const uploadDocument = [upload.single('file'), requireFile, verifyFileContent]

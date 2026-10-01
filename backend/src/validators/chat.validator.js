@@ -2,12 +2,10 @@ import { z } from 'zod'
 
 export const MESSAGE_MAX_LENGTH = 4000
 
-// POST /api/conversations — title is optional (named after the first question otherwise).
 export const createConversationSchema = z.object({
   title: z.string({ error: 'title must be text' }).trim().max(120, { error: 'title must be at most 120 characters' }).optional(),
 })
 
-// POST /api/conversations/:id/messages
 export const sendMessageSchema = z.object({
   content: z
     .string({ error: 'content is required' })
@@ -16,7 +14,6 @@ export const sendMessageSchema = z.object({
     .max(MESSAGE_MAX_LENGTH, { error: `content must be at most ${MESSAGE_MAX_LENGTH} characters` }),
 })
 
-// Route params for /api/conversations/:id/...
 export const conversationParamsSchema = z.object({
   id: z.string().regex(/^[a-f\d]{24}$/i, { error: 'Invalid conversation id' }),
 })

@@ -5,20 +5,12 @@ import { resolveStoragePath } from '../config/storage.js'
 import { Document, DocumentChunk } from '../models/index.js'
 import { embedTexts } from './embedding.service.js'
 
-/*
- * Document ingestion, run by the BullMQ worker (never inside an HTTP request):
- *   extract text -> split into chunks -> embed chunks (Gemini) -> save document_chunks -> indexed.
- */
-
 const CHUNK_SIZE = 1000 // characters
-const CHUNK_OVERLAP = 150 // characters repeated between neighbouring chunks
+const CHUNK_OVERLAP = 150
 const INSERT_BATCH_SIZE = 100
 
-// Progress milestones (0–100) saved on the Document:
-// extracting 5 → chunking 30 → embedding 40…85 (per batch) → saving 85…99 → indexed 100.
 const PROGRESS = { extracting: 5, extracted: 30, embedding: 40, embedded: 85, saved: 99, done: 100 }
 
-// A problem with the file itself. Retrying won't help, and the message is safe to show users.
 export class IngestionError extends Error {
   constructor(message) {
     super(message)
@@ -26,9 +18,6 @@ export class IngestionError extends Error {
   }
 }
 
-// ---------------------------------------------------------------- extraction
-
-// Returns [{ pageNumber, text }]; pageNumber is null for formats without pages.
 async function extractPdf(buffer) {
   const parser = new PDFParse({ data: buffer })
   try {
@@ -77,8 +66,6 @@ async function extractText(document) {
   return extract(buffer)
 }
 
-// ---------------------------------------------------------------- chunking
-
 function normalize(text) {
   return text
     .replace(/\r\n?/g, '\n')
@@ -87,8 +74,7 @@ function normalize(text) {
     .trim()
 }
 
-// Deterministic split into ~CHUNK_SIZE pieces, preferring paragraph, line, sentence and then
-// word boundaries, with CHUNK_OVERLAP characters of context carried into the next chunk.
+// Prefer paragraph, then line, sentence and word boundaries so chunks don't cut mid-thought.
 export function splitText(text, size = CHUNK_SIZE, overlap = CHUNK_OVERLAP) {
   const chunks = []
   let start = 0
@@ -127,19 +113,12 @@ function buildChunks(pages) {
   return chunks
 }
 
-// ---------------------------------------------------------------- pipeline
-
-// Updates the document only while it is still being processed (not deleted or reset).
+// Only touches documents still processing, so a delete/reset mid-run isn't overwritten.
 function updateProcessing(documentId, fields) {
   return Document.updateOne({ _id: documentId, status: 'processing' }, { $set: fields })
 }
 
-/*
- * Processes one document. Safe to run again for the same document: existing chunks are
- * replaced, so a retry or a re-delivered job never leaves duplicate chunks.
- * Throws IngestionError for problems with the file and EmbeddingError for AI-service problems
- * (embedding.service.js); other errors may be retried by BullMQ.
- */
+// Safe to re-run: old chunks are replaced, so retries never leave duplicates.
 export async function ingestDocument(documentId) {
   const document = await Document.findById(documentId)
   if (!document || document.status !== 'processing') {
@@ -166,7 +145,6 @@ export async function ingestDocument(documentId) {
   }
   const stillProcessing = async (fields) => (await updateProcessing(document._id, fields)).matchedCount > 0
 
-  // Embed every chunk with Gemini (batches of 100); progress follows the batches done.
   if (!(await stillProcessing({ processingStage: 'embedding', progress: PROGRESS.embedding }))) return abandon()
   const embedSpan = PROGRESS.embedded - PROGRESS.embedding
   let abandoned = false
@@ -213,9 +191,7 @@ export async function ingestDocument(documentId) {
   return { chunks: chunks.length }
 }
 
-// Called once the job has finally failed. The stage it failed in stays in processingStage and
-// the uploaded file is kept so the user can retry; partial chunks are removed so a failed
-// document is never searchable.
+// Keep the file so the user can retry, but drop partial chunks so it's never searchable.
 export async function markDocumentFailed(documentId, message) {
   await Document.updateOne({ _id: documentId, status: 'processing' }, { $set: { status: 'failed', errorMessage: message } })
   await DocumentChunk.deleteMany({ documentId })

@@ -1,4 +1,3 @@
-// Single source of truth for route paths. Import these instead of hard-coding strings.
 export const PATHS = {
   LOGIN: '/login',
   REGISTER: '/register',

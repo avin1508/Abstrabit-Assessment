@@ -15,7 +15,6 @@ import WorkspaceAvatar from '../workspace/WorkspaceAvatar.jsx'
 import WorkspaceSwitcher from '../workspace/WorkspaceSwitcher.jsx'
 import Sidebar from './Sidebar.jsx'
 
-// Desktop breadcrumb: "<workspace> › <page>", so the active workspace is visible above every page.
 function Breadcrumb() {
   const { activeWorkspace } = useWorkspace()
   const { pathname } = useLocation()
@@ -70,7 +69,7 @@ function MainContent() {
     )
   }
 
-  // Registration creates a first workspace, so this only shows if the user has none.
+  // Registration creates a workspace, so this only shows if the user has none.
   if (!activeWorkspace) {
     return (
       <>
@@ -104,18 +103,16 @@ function MainContent() {
   )
 }
 
-// Authenticated app shell: sidebar + top bar + routed content.
 export default function AppLayout() {
   const dispatch = useDispatch()
   const { loaded, error, activeWorkspaceId } = useWorkspace()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  // Load the signed-in user's workspaces once the protected app mounts (and after a sign-in).
   useEffect(() => {
     if (!loaded && !error) dispatch(fetchWorkspaces())
   }, [loaded, error, dispatch])
 
-  // Documents belong to the active workspace: reload them whenever it changes.
+  // Reload documents whenever the active workspace changes.
   useEffect(() => {
     if (loaded && activeWorkspaceId) dispatch(fetchDocuments({ workspaceId: activeWorkspaceId }))
   }, [loaded, activeWorkspaceId, dispatch])

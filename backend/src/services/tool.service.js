@@ -6,18 +6,9 @@ import { TOOL_SCHEMAS } from '../validators/tool.validator.js'
 import { DiscordError, sendDiscordMessage } from './discord.service.js'
 import { createTask } from './task.service.js'
 
-/*
- * The only place tools run. For every model-requested call:
- *   known tool? -> Zod validation -> authorization -> idempotency -> execute -> log to tool_calls
- * Workspace, user and conversation always come from the verified request (`context`), never
- * from the model. Returns { toolCall, response }: the logged ToolCall (or null) and the safe
- * result that is sent back to the model.
- */
-
 const MAX_LOGGED_STRING = 2000
 const DEFAULT_CHANNEL = 'Discord'
 
-// A tool failure whose message is safe for the model, the log and the user.
 class ToolError extends Error {}
 
 // Removes anything secret-looking before it is stored or returned: the configured webhook
@@ -49,11 +40,8 @@ async function isAuthorized({ workspaceId, userId, conversationId }) {
   return Boolean(workspace && conversation)
 }
 
-/*
- * A successful call of the same tool already made for this question (e.g. the answer failed
- * after the tool ran and the user pressed "Try again"). create_task matches on the title, so
- * several different tasks in one request still work; send_summary is sent once per question.
- */
+// Avoid repeating an action when the user retries a failed answer. create_task matches on
+// title so several different tasks in one request still work.
 function findEarlierSuccess(toolName, args, { conversationId, since }) {
   if (!since) return null
   return ToolCall.findOne({
@@ -94,10 +82,12 @@ async function log({ context, toolName, args, status, result = null, errorMessag
   })
 }
 
+// Workspace, user and conversation always come from the verified request (`context`), never
+// from the model.
 export async function executeToolCall({ name, args, context }) {
   const started = Date.now()
 
-  // Unknown tools never run. (tool_calls only records the two real tools.)
+  // Unknown tools never run.
   if (!TOOL_NAMES.includes(name)) {
     logger.warn(`[tools] rejected unknown tool "${String(name).slice(0, 50)}"`)
     return { toolCall: null, response: { success: false, error: `Unknown tool "${String(name).slice(0, 50)}". Only create_task and send_summary exist.` } }
@@ -134,10 +124,6 @@ export async function executeToolCall({ name, args, context }) {
   }
 }
 
-/*
- * One page of the (already ownership-verified) workspace's tool calls, newest first, plus
- * counts per status for the whole workspace. Values are sanitized again on the way out.
- */
 export async function listToolCalls(workspaceId, { page, limit }) {
   const [toolCalls, total, grouped] = await Promise.all([
     ToolCall.find({ workspaceId }).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * limit).limit(limit).lean(),
@@ -163,7 +149,6 @@ export async function listToolCalls(workspaceId, { page, limit }) {
   }
 }
 
-// Shape returned to the client for a logged tool call.
 export function toToolCallResponse(toolCall) {
   return {
     id: toolCall._id.toString(),

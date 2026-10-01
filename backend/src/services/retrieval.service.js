@@ -4,7 +4,6 @@ import { HttpError } from '../utils/httpError.js'
 import { logger } from '../utils/logger.js'
 import { embedQuery } from './embedding.service.js'
 
-// Atlas Vector Search index on document_chunks (definition: scripts/createVectorIndex.js).
 export const VECTOR_INDEX_NAME = 'document_chunks_vector_index'
 export const MAX_RESULTS = 20
 
@@ -24,14 +23,8 @@ async function assertVectorIndexReady() {
   indexReady = true
 }
 
-/*
- * Semantic search over one workspace's chunks.
- *
- * workspaceId MUST already be verified as owned by the caller (requireWorkspace middleware);
- * it is applied as a filter inside $vectorSearch, so other workspaces' chunks are never
- * candidates. Only chunks of indexed documents are returned, most similar first, with the
- * score reported by Atlas.
- */
+// workspaceId must already be verified (requireWorkspace). Keep the filter inside
+// $vectorSearch so other workspaces' chunks are never even candidates.
 export async function searchSimilarChunks({ workspaceId, query, limit = 5 }) {
   if (!workspaceId) throw new Error('searchSimilarChunks requires a verified workspaceId')
   const verifiedWorkspaceId = new mongoose.Types.ObjectId(String(workspaceId))

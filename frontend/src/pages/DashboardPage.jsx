@@ -16,7 +16,6 @@ import { Alert, Button, EmptyState } from '../components/ui/index.js'
 
 export default function DashboardPage() {
   const { activeWorkspace } = useWorkspace()
-  // Real overview of the active workspace (GET /workspaces/:id/overview).
   const loader = useCallback(() => getWorkspaceOverviewRequest(activeWorkspace.id), [activeWorkspace.id])
   const { data, status, error, reload } = useAsyncData(loader)
 

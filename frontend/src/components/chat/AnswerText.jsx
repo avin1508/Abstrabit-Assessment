@@ -32,10 +32,6 @@ function renderInline(text, { citations, activeCitation, onCite }) {
   })
 }
 
-/*
- * Minimal formatter for assistant text: paragraphs (blank line), "- " bullet lists,
- * **bold**, `code` and [n] citation badges (interactive when `onCite` is given).
- */
 export default function AnswerText({ text = '', citations, activeCitation, onCite }) {
   const blocks = text.split(/\n{2,}/)
   const options = { citations, activeCitation, onCite }

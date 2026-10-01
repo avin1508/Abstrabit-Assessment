@@ -12,7 +12,6 @@ const ICON_TONES = {
   blocked: 'text-amber-600',
 }
 
-// One tool invocation in a compact list (dashboard): tool id, status, what it did, when.
 export default function ToolRunRow({ run }) {
   const { label, icon: Icon } = getToolMeta(run.tool)
   const duration = formatDuration(run.durationMs)

@@ -11,7 +11,6 @@ import { requireWorkspace } from '../middleware/workspace.middleware.js'
 
 const router = Router()
 
-// Signed-in user + owned workspace (X-Workspace-Id header) on every route.
 router.use(authenticate, requireWorkspace)
 
 router.post('/', createConversation)

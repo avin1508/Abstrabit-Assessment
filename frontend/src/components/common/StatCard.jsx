@@ -9,12 +9,6 @@ const FOOTNOTE_TONES = {
   danger: 'text-red-600',
 }
 
-/*
- * Single metric tile.
- *   value     — preformatted string/number
- *   title     — full-precision value for the tooltip when `value` is abbreviated
- *   footnote  — small line under the value (trend, breakdown); tone colors it
- */
 export default function StatCard({ label, value, title, icon: Icon, footnote, footnoteTone = 'neutral', className }) {
   return (
     <Card className={cn('flex flex-col p-4', className)}>

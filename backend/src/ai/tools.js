@@ -1,8 +1,7 @@
 import { Type } from '@google/genai'
 
-// The only tools the model may call. These declarations guide the model; they are NOT a
-// security boundary — every call is validated with Zod (validators/tool.validator.js) and
-// authorized server-side (services/tool.service.js) before anything runs.
+// These declarations only guide the model. They aren't a security boundary: every call is
+// validated and authorized in tool.service.js before anything runs.
 export const TOOL_NAMES = ['create_task', 'send_summary']
 
 export const TOOL_DECLARATIONS = [

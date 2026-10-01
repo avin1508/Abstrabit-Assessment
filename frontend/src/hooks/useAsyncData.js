@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
-/*
- * Runs an async loader and tracks its result. Pass a memoized loader (useCallback);
- * it re-runs whenever the loader identity changes, and on reload().
- * Previous data is kept while reloading so the UI can refresh in place.
- */
+// Pass a memoized loader. Old data stays visible while reloading.
 export default function useAsyncData(loader) {
   const [state, setState] = useState({ status: 'loading', data: null, error: null })
   const [reloadKey, setReloadKey] = useState(0)

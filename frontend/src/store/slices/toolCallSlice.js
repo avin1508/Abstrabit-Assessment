@@ -6,7 +6,6 @@ import { logout } from './authSlice.js'
 export const TOOL_CALL_PAGE_SIZE = 10
 
 const initialState = {
-  // The current page of the active workspace's tool call log.
   items: [],
   // Workspace the list belongs to, so a response for a previous workspace is never shown.
   workspaceId: null,
@@ -15,11 +14,9 @@ const initialState = {
   loading: false,
   error: null,
   listRequestId: null,
-  // { workspaceId, page } of the list request in flight.
   listQuery: null,
 }
 
-// Callers pass workspaceSlice.activeWorkspaceId (via useWorkspace's activeWorkspace.id).
 export const fetchToolCalls = createAsyncThunk(
   'toolCall/fetchToolCalls',
   async ({ workspaceId, page = 1, limit = TOOL_CALL_PAGE_SIZE }, { rejectWithValue }) => {
@@ -30,7 +27,7 @@ export const fetchToolCalls = createAsyncThunk(
     }
   },
   {
-    // The same page for the same workspace is never requested twice at once.
+    // Don't request the same page twice at once.
     condition: ({ workspaceId, page = 1 }, { getState }) => {
       const { loading, listQuery } = getState().toolCall
       return !(loading && listQuery?.workspaceId === workspaceId && listQuery.page === page)

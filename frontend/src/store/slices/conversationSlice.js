@@ -10,16 +10,11 @@ import {
 import { plainText } from '../../utils/chatText.js'
 import { logout } from './authSlice.js'
 
-/*
- * Chat state for the active workspace (workspaceSlice.activeWorkspaceId is passed to every
- * thunk; no workspace id is stored here). resetChat() clears everything when the workspace
- * changes; request ids make sure late responses for an old workspace or thread are ignored.
- */
+// Request ids make sure late responses for an old workspace or thread are ignored.
 const initialState = {
   conversations: [],
-  listStatus: 'idle', // idle | loading | ready | error
-  // The open conversation and its messages.
-  thread: { conversationId: null, status: 'idle', messages: [] }, // status: idle | loading | ready | error
+  listStatus: 'idle',
+  thread: { conversationId: null, status: 'idle', messages: [] },
   sending: false,
   retrying: false,
   error: null,
@@ -77,7 +72,7 @@ export const sendMessage = createAsyncThunk(
       return reloadAfterFailure(workspaceId, conversationId, error, rejectWithValue)
     }
   },
-  // One request at a time: repeated clicks don't send duplicates.
+  // One request at a time so repeated clicks don't send duplicates.
   { condition: (_, { getState }) => !getState().conversation.sending && !getState().conversation.retrying },
 )
 
@@ -93,7 +88,7 @@ export const retryMessage = createAsyncThunk(
   { condition: (_, { getState }) => !getState().conversation.sending && !getState().conversation.retrying },
 )
 
-// Sidebar preview of a conversation's latest message (the list API doesn't include one).
+// The list API doesn't include a preview, so build it from loaded messages.
 function lastMessageOf(messages) {
   const chat = messages.filter((message) => message.role !== 'tool' && !message.pending)
   const last = chat[chat.length - 1]
@@ -104,7 +99,6 @@ function lastMessageOf(messages) {
   return { role: last.role, text, grounded: lastAnswer?.state !== 'unknown' }
 }
 
-// Keeps the open conversation's sidebar entry in step with its messages.
 function syncConversation(state, conversationId, { bump = false } = {}) {
   const index = state.conversations.findIndex((conversation) => conversation.id === conversationId)
   if (index === -1) return
@@ -124,7 +118,6 @@ const conversationSlice = createSlice({
   name: 'conversation',
   initialState,
   reducers: {
-    // Called when the active workspace changes (and on leaving chat): nothing carries over.
     resetChat: () => initialState,
   },
   extraReducers: (builder) => {
@@ -135,7 +128,6 @@ const conversationSlice = createSlice({
       })
       .addCase(fetchConversations.fulfilled, (state, action) => {
         if (action.meta.requestId !== state.listRequestId) return
-        // Keep previews already computed for loaded conversations.
         const previews = new Map(state.conversations.map((conversation) => [conversation.id, conversation.lastMessage]))
         state.conversations = action.payload.map((conversation) => ({ ...conversation, lastMessage: previews.get(conversation.id) }))
         state.listStatus = 'ready'
@@ -169,7 +161,6 @@ const conversationSlice = createSlice({
         state.error = action.payload?.message ?? null
       })
 
-      // While waiting: the question plus the existing "thinking" placeholder (replaced by the reply).
       .addCase(sendMessage.pending, (state, action) => {
         const { conversationId, content, workspaceId } = action.meta.arg
         state.sending = true
@@ -205,7 +196,6 @@ const conversationSlice = createSlice({
         syncConversation(state, conversationId, { bump: Boolean(action.payload?.messages) })
       })
 
-      // Retry: the failed answer shows the "thinking" placeholder until the new one arrives.
       .addCase(retryMessage.pending, (state, action) => {
         state.retrying = true
         state.error = null

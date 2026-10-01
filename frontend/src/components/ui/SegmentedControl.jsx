@@ -1,10 +1,6 @@
 import { cn } from '../../utils/cn.js'
 import { focusRing } from '../../utils/styles.js'
 
-/*
- * Single-choice filter, e.g. All / Indexed / Processing / Failed.
- * options: [{ value, label, count? }]
- */
 export default function SegmentedControl({ label, options, value, onChange, className }) {
   function onKeyDown(event) {
     const index = options.findIndex((option) => option.value === value)

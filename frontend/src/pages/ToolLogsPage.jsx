@@ -9,7 +9,6 @@ import { Alert, Button, Card, EmptyState } from '../components/ui/index.js'
 
 export default function ToolLogsPage() {
   const { activeWorkspace: workspace } = useWorkspace()
-  // One backend page at a time (10 per page).
   const { runs, status, error, pagination, setPage, reload } = useToolLogs(workspace.id)
   const loading = status === 'loading' && runs.length === 0
 
