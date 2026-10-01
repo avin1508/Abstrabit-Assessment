@@ -34,3 +34,7 @@ export const TASK_ENDPOINTS = {
 export const TOOL_CALL_ENDPOINTS = {
   LIST: '/tool-calls',
 }
+
+export const OVERVIEW_ENDPOINTS = {
+  GET: (workspaceId) => `/workspaces/${workspaceId}/overview`,
+}
