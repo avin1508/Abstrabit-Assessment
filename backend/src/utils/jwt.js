@@ -4,7 +4,6 @@ import { env } from '../config/env.js'
 const ALGORITHM = 'HS256'
 const EXPIRES_IN = '7d'
 
-// The user ID is the token subject.
 export function signToken(userId) {
   return jwt.sign({}, env.jwtSecret, {
     algorithm: ALGORITHM,
@@ -13,7 +12,6 @@ export function signToken(userId) {
   })
 }
 
-// Returns the decoded payload; throws TokenExpiredError / JsonWebTokenError when invalid.
 export function verifyToken(token) {
   return jwt.verify(token, env.jwtSecret, { algorithms: [ALGORITHM] })
 }

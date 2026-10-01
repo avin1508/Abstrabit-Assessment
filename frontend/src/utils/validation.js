@@ -38,7 +38,6 @@ export function validateRegister({ name, email, password, confirmPassword }) {
   else if (password.length < PASSWORD_MIN_LENGTH) passwordError = `Use at least ${PASSWORD_MIN_LENGTH} characters.`
   else if (password.length > PASSWORD_MAX_LENGTH) passwordError = `Use at most ${PASSWORD_MAX_LENGTH} characters.`
 
-  // Client-side only; confirmPassword is never sent to the backend.
   let confirmError
   if (!confirmPassword) confirmError = 'Confirm your password.'
   else if (confirmPassword !== password) confirmError = 'Passwords don’t match.'

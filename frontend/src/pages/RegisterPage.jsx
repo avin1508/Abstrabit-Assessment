@@ -12,8 +12,7 @@ export default function RegisterPage() {
   const dispatch = useDispatch()
   const { toast } = useToast()
 
-  // confirmPassword is checked client-side only; the backend receives name, email and password.
-  // On success AuthLayout redirects into the app.
+  // confirmPassword is checked here only; it's never sent to the backend.
   const form = useForm({
     initialValues: { name: '', email: '', password: '', confirmPassword: '' },
     validate: validateRegister,

@@ -16,7 +16,6 @@ export default function LoginPage() {
   const dispatch = useDispatch()
   const { toast } = useToast()
 
-  // On success AuthLayout redirects to the page the user came from (or the dashboard).
   const form = useForm({
     initialValues: { email: '', password: '' },
     validate: validateLogin,

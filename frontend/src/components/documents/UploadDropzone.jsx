@@ -6,11 +6,6 @@ import { focusRing } from '../../utils/styles.js'
 
 const TYPE_LABELS = Object.values(SUPPORTED_FILE_TYPES).map((type) => type.label)
 
-/*
- * Drag-and-drop target plus hidden file input.
- * `ref.current.open()` opens the file picker (used by the page's Upload button).
- * When `disabled`, renders a read-only notice instead.
- */
 export default function UploadDropzone({ ref, onFiles, workspaceName, disabled = false, className }) {
   const inputRef = useRef(null)
   const dragDepth = useRef(0)

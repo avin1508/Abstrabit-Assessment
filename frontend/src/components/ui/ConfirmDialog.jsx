@@ -2,8 +2,6 @@ import { useState } from 'react'
 import Button from './Button.jsx'
 import Modal from './Modal.jsx'
 
-// Confirmation for destructive or important actions. `onConfirm` may be async; the
-// confirm button shows a spinner until it settles.
 export default function ConfirmDialog({
   open,
   onClose,

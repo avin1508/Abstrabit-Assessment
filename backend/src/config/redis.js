@@ -9,7 +9,6 @@ export function createRedisConnection(name) {
   return connection
 }
 
-// Startup probe: connect + PING once, then close. Throws if Redis is unreachable.
 export async function verifyRedisConnection() {
   const probe = new Redis(env.redisUrl, { lazyConnect: true, maxRetriesPerRequest: 1, retryStrategy: () => null })
   probe.on('error', () => {})

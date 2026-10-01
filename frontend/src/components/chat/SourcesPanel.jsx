@@ -2,11 +2,6 @@ import { BookOpen, FileX, FolderOpen, Info, ShieldCheck } from 'lucide-react'
 import EmptyState from '../ui/EmptyState.jsx'
 import SourceCard from './SourceCard.jsx'
 
-/*
- * Evidence for the selected answer. Kept visually separate from the answer itself:
- * the answer is generated text; these are the retrieved passages it was based on.
- * Only messages from the active workspace are ever rendered.
- */
 export default function SourcesPanel({ message, workspace, indexedCount, activeCitation, onSelectCitation, embedded = false }) {
   // Defensive: never show evidence that doesn't belong to the active workspace.
   const scoped = message && message.workspaceId === workspace.id ? message : null

@@ -10,8 +10,7 @@ export default function AuthLayout() {
   const { isAuthenticated } = useAuth()
   const location = useLocation()
 
-  // Signed-in users don't see /login or /register. This also performs the redirect after a
-  // successful sign-in or registration, back to the page that sent them to sign in.
+  // Also handles the redirect after sign-in/registration, back to where the user came from.
   if (isAuthenticated) {
     return <Navigate to={location.state?.from?.pathname ?? PATHS.DASHBOARD} replace />
   }

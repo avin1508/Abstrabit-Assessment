@@ -14,7 +14,6 @@ const SIZES = {
   md: 'size-9 text-[9px]',
 }
 
-// Square file-type tile showing the extension, e.g. "PDF".
 export default function FileIcon({ type = '', size = 'md', className }) {
   return (
     <span

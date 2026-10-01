@@ -2,7 +2,6 @@ import { cn } from '../../utils/cn.js'
 
 const MARK_SIZES = { sm: 'size-6', md: 'size-7', lg: 'size-9' }
 
-// Abstrabit mark: stacked layers → "documents distilled into answers".
 export function LogoMark({ size = 'md', className }) {
   return (
     <span

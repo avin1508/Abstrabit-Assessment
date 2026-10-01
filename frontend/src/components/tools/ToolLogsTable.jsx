@@ -14,7 +14,6 @@ function ToolName({ run }) {
   return <p className="truncate font-mono text-sm font-medium text-fg">{run.tool}</p>
 }
 
-// key: "value" pairs, one per line.
 function Arguments({ args = {} }) {
   const entries = Object.entries(args).filter(([key]) => ARG_LABELS[key])
   return (
@@ -41,7 +40,6 @@ function Result({ run }) {
   return <p className="text-xs text-fg-subtle">In progress…</p>
 }
 
-// Tool calls: tool → arguments → status → result or error. Same table style as Tasks.
 export default function ToolLogsTable({ runs }) {
   return (
     <>

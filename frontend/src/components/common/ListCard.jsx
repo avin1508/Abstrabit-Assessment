@@ -5,13 +5,6 @@ import { focusRing } from '../../utils/styles.js'
 import { Card, CardHeader } from '../ui/Card.jsx'
 import Skeleton from '../ui/Skeleton.jsx'
 
-/*
- * Card with a titled header and a divided list body.
- *   viewAllTo  — optional route for the "View all" link
- *   loading    — renders `skeletonRows` placeholder rows
- *   empty      — element rendered instead of children when there are no rows
- *   divided    — rows separated by rules (default) vs. padded, self-contained items
- */
 export default function ListCard({
   title,
   description,

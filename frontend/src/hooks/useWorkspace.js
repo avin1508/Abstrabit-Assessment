@@ -4,11 +4,6 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { createWorkspace, fetchWorkspaces, setActiveWorkspace } from '../store/slices/workspaceSlice.js'
 import useToast from './useToast.js'
 
-/*
- * Workspace state from Redux (workspaceSlice) plus the actions the UI needs.
- * `activeWorkspace` is derived from workspaceSlice.activeWorkspaceId, the single source of truth.
- * Workspace-scoped pages read `activeWorkspace.id` and re-fetch when it changes.
- */
 export default function useWorkspace() {
   const dispatch = useDispatch()
   const navigate = useNavigate()
@@ -33,7 +28,6 @@ export default function useWorkspace() {
     [workspaces, activeWorkspaceId, clearScopedQuery, dispatch, toast],
   )
 
-  // Creates the workspace and makes it active. Throws { message } on failure.
   const addWorkspace = useCallback(
     async (name) => {
       const workspace = await dispatch(createWorkspace({ name })).unwrap()

@@ -13,7 +13,6 @@ function Marker({ children }) {
   )
 }
 
-// Right-hand brand panel on auth screens (desktop only). A static product vignette, not live data.
 export default function AuthShowcase({ className }) {
   return (
     <aside className={cn('relative flex-col overflow-hidden bg-fg p-12 text-white', className)}>

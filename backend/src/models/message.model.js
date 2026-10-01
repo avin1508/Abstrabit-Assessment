@@ -73,7 +73,6 @@ const messageSchema = new mongoose.Schema(
       required: true,
     },
 
-    // Set on assistant messages only.
     status: {
       type: String,
       enum: [...MESSAGE_STATUSES, null],

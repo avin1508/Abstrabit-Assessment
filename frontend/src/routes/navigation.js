@@ -1,7 +1,6 @@
 import { FileText, LayoutDashboard, ListChecks, MessageSquare, SquareTerminal } from 'lucide-react'
 import { PATHS } from './paths.js'
 
-// Sidebar sections for the authenticated app shell.
 // `fullBleed` pages fill the content area edge to edge and manage their own scrolling.
 export const NAV_SECTIONS = [
   {

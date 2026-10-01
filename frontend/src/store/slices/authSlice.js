@@ -15,7 +15,6 @@ const initialState = {
   initialized: !storedToken,
 }
 
-// Rejections carry { message, status } so forms can show the message via unwrap().
 function toRejection(error) {
   return { message: getErrorMessage(error), status: error?.response?.status ?? null }
 }

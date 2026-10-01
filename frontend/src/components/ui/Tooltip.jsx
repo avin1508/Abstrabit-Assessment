@@ -7,7 +7,6 @@ const SIDES = {
   right: 'left-full top-1/2 ml-1.5 -translate-y-1/2',
 }
 
-// CSS-only tooltip: shows on hover (after a short delay) and on keyboard focus.
 export default function Tooltip({ content, side = 'top', className, children }) {
   if (!content) return children
 

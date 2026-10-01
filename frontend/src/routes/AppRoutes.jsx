@@ -5,7 +5,6 @@ import ProtectedRoute from './ProtectedRoute.jsx'
 import AppLayout from '../components/layout/AppLayout.jsx'
 import AuthLayout from '../components/layout/AuthLayout.jsx'
 
-// Pages are code-split; AuthLayout and AppLayout provide the Suspense fallbacks.
 const LoginPage = lazy(() => import('../pages/LoginPage.jsx'))
 const RegisterPage = lazy(() => import('../pages/RegisterPage.jsx'))
 const DashboardPage = lazy(() => import('../pages/DashboardPage.jsx'))

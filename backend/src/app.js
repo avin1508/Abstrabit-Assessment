@@ -4,7 +4,11 @@ import { env } from './config/env.js'
 import { errorHandler, notFound } from './middleware/error.middleware.js'
 import authRoutes from './routes/auth.routes.js'
 import workspaceRoutes from './routes/workspace.routes.js'
+import dashboardRoutes from './routes/dashboard.routes.js'
 import documentRoutes from './routes/document.routes.js'
+import chatRoutes from './routes/chat.routes.js'
+import taskRoutes from './routes/task.routes.js'
+import toolRoutes from './routes/tool.routes.js'
 
 const app = express()
 
@@ -16,8 +20,12 @@ app.get('/api/health', (req, res) => {
 })
 
 app.use('/api/auth', authRoutes)
+app.use('/api/workspaces/:workspaceId/overview', dashboardRoutes)
 app.use('/api/workspaces', workspaceRoutes)
 app.use('/api/documents', documentRoutes)
+app.use('/api/conversations', chatRoutes)
+app.use('/api/tasks', taskRoutes)
+app.use('/api/tool-calls', toolRoutes)
 
 app.use(notFound)
 app.use(errorHandler)

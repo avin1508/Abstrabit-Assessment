@@ -1,7 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import Button from '../ui/Button.jsx'
 
-// Previous / "Page X of Y" / Next. Renders nothing when everything fits on one page.
 export default function Pagination({ page, pageCount, onChange, label = 'Pagination' }) {
   if (pageCount <= 1) return null
 

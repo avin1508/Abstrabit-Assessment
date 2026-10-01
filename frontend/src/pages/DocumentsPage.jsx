@@ -23,7 +23,6 @@ import {
   Tooltip,
 } from '../components/ui/index.js'
 
-// Typing in the search box queries the backend after this pause.
 const SEARCH_DEBOUNCE_MS = 300
 
 const FILTERS = [
@@ -38,7 +37,6 @@ export default function DocumentsPage() {
   const { toast } = useToast()
   const writable = canWrite(workspace)
 
-  // Search, status filter and paging all run on the backend; changing a filter returns to page 1.
   const {
     documents,
     status,
@@ -72,7 +70,7 @@ export default function DocumentsPage() {
     return () => clearTimeout(timer)
   }, [query, filters.search, setSearch])
 
-  // Look the selection up in the current page so the drawer reflects ingestion progress.
+  // Read from the current page so the drawer shows live ingestion progress.
   const selected = documents.find((document) => document.id === selectedId) ?? null
 
   function handleFiles(files) {

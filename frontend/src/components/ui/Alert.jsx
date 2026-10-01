@@ -9,7 +9,6 @@ const TONES = {
   neutral: { box: 'border-line bg-surface-muted', icon: 'text-fg-subtle', Icon: Info },
 }
 
-// Inline, persistent message. For transient feedback use a toast instead.
 export default function Alert({ tone = 'info', title, icon, action, onDismiss, className, children }) {
   const { box, icon: iconClass, Icon: DefaultIcon } = TONES[tone]
   const Icon = icon ?? DefaultIcon

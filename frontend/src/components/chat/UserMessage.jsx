@@ -1,7 +1,6 @@
 import RelativeTime from '../common/RelativeTime.jsx'
 import Avatar from '../ui/Avatar.jsx'
 
-// The question side of a turn: compact, right-aligned, dark.
 export default function UserMessage({ message }) {
   return (
     <div className="flex justify-end gap-3">

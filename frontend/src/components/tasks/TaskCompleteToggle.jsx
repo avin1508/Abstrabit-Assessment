@@ -2,7 +2,6 @@ import { Check } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
 import { focusRing } from '../../utils/styles.js'
 
-// Round check control to complete / reopen a task.
 export default function TaskCompleteToggle({ task, onToggle, disabled }) {
   const completed = task.status === 'completed'
 

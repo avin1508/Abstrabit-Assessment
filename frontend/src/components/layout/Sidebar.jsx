@@ -47,7 +47,6 @@ export default function Sidebar({ open, onClose }) {
   const dispatch = useDispatch()
   const navigate = useNavigate()
 
-  // Clears the token and user from Redux (and storage), then shows the sign-in screen.
   function handleLogout() {
     dispatch(logout())
     navigate(PATHS.LOGIN, { replace: true })

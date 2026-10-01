@@ -3,7 +3,6 @@ import { getUserById, toSafeUser } from '../services/auth.service.js'
 import { HttpError } from '../utils/httpError.js'
 import { verifyToken } from '../utils/jwt.js'
 
-// Requires "Authorization: Bearer <token>" and attaches the verified user to req.user.
 export async function authenticate(req, res, next) {
   const [scheme, token, extra] = (req.headers.authorization ?? '').split(' ')
   if (scheme !== 'Bearer' || !token || extra) {

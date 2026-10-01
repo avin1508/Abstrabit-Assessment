@@ -58,12 +58,6 @@ function CompactTrigger({ workspace, open, ...props }) {
   )
 }
 
-/*
- * Active-workspace picker.
- *   variant="sidebar" — full-width card for the desktop sidebar / mobile drawer.
- *   variant="compact" — pill for the top bar on smaller screens.
- * `onSwitch` fires after a new workspace is chosen (e.g. to close the mobile drawer).
- */
 export default function WorkspaceSwitcher({ variant = 'sidebar', onSwitch, className }) {
   const { workspaces, activeWorkspace, switchWorkspace } = useWorkspace()
   const { open, rootRef, menuRef, triggerProps, onMenuKeyDown, closeAndFocusTrigger } = useMenu()

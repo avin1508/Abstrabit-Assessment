@@ -1,6 +1,5 @@
 import { useCallback, useSyncExternalStore } from 'react'
 
-// Live boolean for a CSS media query, e.g. useMediaQuery('(min-width: 1280px)').
 export default function useMediaQuery(query) {
   const subscribe = useCallback(
     (onChange) => {

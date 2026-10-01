@@ -4,16 +4,13 @@ import { createWorkspaceRequest, fetchWorkspacesRequest } from '../../api/worksp
 import { readStorage } from '../../utils/storage.js'
 import { logout } from './authSlice.js'
 
-// Only the active workspace id is persisted (see store/index.js); the list is always fetched.
 export const ACTIVE_WORKSPACE_STORAGE_KEY = 'abstrabit.activeWorkspaceId'
 
 const initialState = {
   workspaces: [],
-  // The single source of truth for which workspace the app is showing.
   activeWorkspaceId: readStorage(ACTIVE_WORKSPACE_STORAGE_KEY),
   loading: false,
   error: null,
-  // True once the list has been fetched for the signed-in user.
   loaded: false,
 }
 
@@ -57,7 +54,7 @@ const workspaceSlice = createSlice({
       })
       .addCase(fetchWorkspaces.fulfilled, (state, action) => {
         state.workspaces = action.payload
-        // Keep the stored/current selection if it still exists, otherwise use the first workspace.
+        // Keep the stored selection if it still exists, otherwise fall back to the first workspace.
         const stillValid = action.payload.some((workspace) => workspace.id === state.activeWorkspaceId)
         if (!stillValid) state.activeWorkspaceId = action.payload[0]?.id ?? null
         state.loading = false

@@ -29,12 +29,12 @@ async function removeStoredFile(storagePath) {
   try {
     await unlink(resolveStoragePath(storagePath))
   } catch (error) {
-    // Already gone is fine; anything else is logged, not surfaced to the client.
+    // Already gone is fine.
     if (error.code !== 'ENOENT') logger.warn(`Couldn't delete stored file ${storagePath}: ${error.message}`)
   }
 }
 
-// Keeps readable names but drops path parts and control characters.
+// Display name only: strip path parts and control characters.
 function cleanOriginalName(name) {
   const base = name.split(/[\\/]/).pop()
   return base.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 255) || 'document'
@@ -44,7 +44,7 @@ function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-// Only documents in this (already ownership-verified) workspace.
+// Always scoped to the workspace, so another workspace's document is just "not found".
 async function findWorkspaceDocument(workspaceId, documentId) {
   const document = await Document.findOne({ _id: documentId, workspaceId })
   if (!document) throw new HttpError(404, 'Document not found')
@@ -64,7 +64,6 @@ async function queueIngestion(document) {
   }
 }
 
-// Stores the upload and queues background ingestion. Nothing heavy runs in the request.
 export async function createDocument({ workspaceId, userId, file }) {
   const storagePath = toStoragePath(file.filename)
   let document
@@ -90,7 +89,7 @@ export async function createDocument({ workspaceId, userId, file }) {
       progress: 0,
     })
   } catch (error) {
-    // Don't leave an orphaned file behind when the record wasn't created.
+    // Don't leave an orphaned file behind if the record wasn't created.
     await removeStoredFile(storagePath)
     throw error
   }
@@ -99,8 +98,6 @@ export async function createDocument({ workspaceId, userId, file }) {
   return toDocumentResponse(document)
 }
 
-// One page of the workspace's documents (newest first), optionally filtered by status and
-// by a case-insensitive name search. Counts per status cover the whole workspace.
 export async function listDocuments(workspaceId, { page, limit, status, search }) {
   const filter = { workspaceId }
   if (status) filter.status = status
@@ -149,7 +146,6 @@ export async function deleteDocument(workspaceId, documentId) {
   await removeStoredFile(document.storagePath)
 }
 
-// Resets a failed document and queues ingestion again.
 export async function retryDocument(workspaceId, documentId) {
   const document = await findWorkspaceDocument(workspaceId, documentId)
   if (document.status !== 'failed') {

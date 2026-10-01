@@ -24,9 +24,12 @@
     "prod:down": "docker compose -f docker-compose.prod.yml down",
     "prod:restart": "docker compose -f docker-compose.prod.yml restart",
     "prod:logs": "docker compose -f docker-compose.prod.yml logs -f",
-    "prod:ps": "docker compose -f docker-compose.prod.yml ps"
+    "prod:ps": "docker compose -f docker-compose.prod.yml ps",
+    "vector:index": "node src/scripts/createVectorIndex.js",
+    "embeddings:backfill": "node src/scripts/backfillEmbeddings.js"
   },
   "dependencies": {
+    "@google/genai": "^2.25.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^6.3.10",
     "cors": "^2.8.6",

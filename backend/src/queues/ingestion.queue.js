@@ -26,11 +26,8 @@ export function getIngestionQueue() {
   return queue
 }
 
-/*
- * Queues ingestion for a document. The job carries only the id; the worker loads the rest.
- * The job id is the document id, so a document is never queued twice at the same time.
- * A finished job with that id (from an earlier run) is removed first so retries can re-queue.
- */
+// The job id is the document id, so a document is never queued twice at the same time.
+// A finished job with that id (from an earlier run) is removed first so retries can re-queue.
 export async function enqueueIngestion(documentId) {
   const ingestionQueue = getIngestionQueue()
   const jobId = String(documentId)

@@ -2,7 +2,7 @@ import { Ellipsis, PanelRightOpen, RotateCcw, Trash2 } from 'lucide-react'
 import Dropdown from '../ui/Dropdown.jsx'
 import IconButton from '../ui/IconButton.jsx'
 
-// Per-document actions. Write actions are hidden for read-only members.
+// Write actions are hidden for read-only members.
 export default function DocumentActionsMenu({ document, writable, onOpen, onRetry, onDelete }) {
   const canRetry = writable && document.status === 'failed'
 

@@ -19,7 +19,6 @@ const SIZES = {
 
 const PALETTE = ['brand', 'emerald', 'amber', 'sky', 'rose']
 
-// Stable colour per workspace id, so each workspace keeps the same colour across reloads.
 function colorFor(workspace) {
   const id = workspace?.id ?? ''
   let hash = 0
@@ -27,7 +26,6 @@ function colorFor(workspace) {
   return id ? PALETTE[hash % PALETTE.length] : 'neutral'
 }
 
-// Square monogram for a workspace. People use round <Avatar>; workspaces are always square.
 export default function WorkspaceAvatar({ workspace, size = 'md', className }) {
   return (
     <span

@@ -14,21 +14,17 @@ const DEFAULT_FILTERS = { status: 'all', search: '' }
 const EMPTY_COUNTS = { all: 0, processing: 0, indexed: 0, failed: 0 }
 
 const initialState = {
-  // The current page of documents, as returned by the backend.
   documents: [],
   // Workspace the list belongs to, so a response for a previous workspace is never shown.
   workspaceId: null,
   pagination: { page: 1, limit: PAGE_SIZE, total: 0, totalPages: 0 },
-  // Filters sent to the backend with every page request.
   filters: DEFAULT_FILTERS,
-  // Documents per status across the whole workspace (for the filter tabs).
   statusCounts: EMPTY_COUNTS,
   loading: false,
   uploading: false,
   deleting: false,
   retrying: false,
   uploadProgress: 0,
-  // Last list-load error. Upload/delete/retry errors go back to the caller via unwrap().
   error: null,
   // Only the latest list request may update the list (fast page clicks, workspace switches).
   listRequestId: null,
@@ -36,10 +32,6 @@ const initialState = {
 
 const toRejection = (error) => ({ message: getErrorMessage(error) })
 
-/*
- * One page of documents. Callers pass workspaceSlice.activeWorkspaceId (via useWorkspace).
- * Omitted options fall back to page 1 and no filters.
- */
 export const fetchDocuments = createAsyncThunk(
   'document/fetchDocuments',
   async ({ workspaceId, page = 1, limit = PAGE_SIZE, status = 'all', search = '' }, { rejectWithValue }) => {
@@ -51,7 +43,6 @@ export const fetchDocuments = createAsyncThunk(
   },
 )
 
-// Processing state of one document, for progress polling.
 export const fetchDocumentStatus = createAsyncThunk(
   'document/fetchDocumentStatus',
   async ({ workspaceId, documentId }, { rejectWithValue }) => {
@@ -97,7 +88,6 @@ export const retryDocument = createAsyncThunk(
   },
 )
 
-// Replaces a document in the current page, keeping the status counts in step.
 function applyDocumentUpdate(state, update) {
   const index = state.documents.findIndex((document) => document.id === update.id)
   if (index === -1) return
@@ -121,7 +111,7 @@ const documentSlice = createSlice({
     builder
       .addCase(fetchDocuments.pending, (state, action) => {
         const { workspaceId, limit = PAGE_SIZE, status = 'all', search = '' } = action.meta.arg
-        // Switching workspace: drop the previous workspace's page, pagination and counts at once.
+        // Switched workspace: drop the old page and counts right away.
         if (workspaceId !== state.workspaceId) {
           state.documents = []
           state.statusCounts = EMPTY_COUNTS
@@ -156,7 +146,7 @@ const documentSlice = createSlice({
         state.uploading = true
         state.uploadProgress = 0
       })
-      // The page is re-fetched after an upload (see useDocumentUploads), so only flags change here.
+      // The page is refetched after an upload, so only flags change here.
       .addCase(uploadDocument.fulfilled, (state) => {
         state.uploading = false
         state.uploadProgress = 0

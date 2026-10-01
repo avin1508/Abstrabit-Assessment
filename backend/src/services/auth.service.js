@@ -18,7 +18,6 @@ export function toSafeUser(user) {
   }
 }
 
-// Creates the user and their first workspace atomically.
 export async function register({ name, email, password }) {
   if (await User.exists({ email })) {
     throw new HttpError(409, 'An account with this email already exists')

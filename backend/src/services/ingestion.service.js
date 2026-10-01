@@ -3,21 +3,14 @@ import mammoth from 'mammoth'
 import { PDFParse } from 'pdf-parse'
 import { resolveStoragePath } from '../config/storage.js'
 import { Document, DocumentChunk } from '../models/index.js'
-
-/*
- * Document ingestion, run by the BullMQ worker (never inside an HTTP request):
- *   extract text -> split into chunks -> save document_chunks -> mark indexed.
- * Embeddings are added in the next module; chunks are saved without them.
- */
+import { embedTexts } from './embedding.service.js'
 
 const CHUNK_SIZE = 1000 // characters
-const CHUNK_OVERLAP = 150 // characters repeated between neighbouring chunks
+const CHUNK_OVERLAP = 150
 const INSERT_BATCH_SIZE = 100
 
-// Progress milestones (0–100) saved on the Document.
-const PROGRESS = { extracting: 5, extracted: 30, chunking: 40, chunked: 90, done: 100 }
+const PROGRESS = { extracting: 5, extracted: 30, embedding: 40, embedded: 85, saved: 99, done: 100 }
 
-// A problem with the file itself. Retrying won't help, and the message is safe to show users.
 export class IngestionError extends Error {
   constructor(message) {
     super(message)
@@ -25,9 +18,6 @@ export class IngestionError extends Error {
   }
 }
 
-// ---------------------------------------------------------------- extraction
-
-// Returns [{ pageNumber, text }]; pageNumber is null for formats without pages.
 async function extractPdf(buffer) {
   const parser = new PDFParse({ data: buffer })
   try {
@@ -76,8 +66,6 @@ async function extractText(document) {
   return extract(buffer)
 }
 
-// ---------------------------------------------------------------- chunking
-
 function normalize(text) {
   return text
     .replace(/\r\n?/g, '\n')
@@ -86,8 +74,7 @@ function normalize(text) {
     .trim()
 }
 
-// Deterministic split into ~CHUNK_SIZE pieces, preferring paragraph, line, sentence and then
-// word boundaries, with CHUNK_OVERLAP characters of context carried into the next chunk.
+// Prefer paragraph, then line, sentence and word boundaries so chunks don't cut mid-thought.
 export function splitText(text, size = CHUNK_SIZE, overlap = CHUNK_OVERLAP) {
   const chunks = []
   let start = 0
@@ -126,18 +113,12 @@ function buildChunks(pages) {
   return chunks
 }
 
-// ---------------------------------------------------------------- pipeline
-
-// Updates the document only while it is still being processed (not deleted or reset).
+// Only touches documents still processing, so a delete/reset mid-run isn't overwritten.
 function updateProcessing(documentId, fields) {
   return Document.updateOne({ _id: documentId, status: 'processing' }, { $set: fields })
 }
 
-/*
- * Processes one document. Safe to run again for the same document: existing chunks are
- * replaced, so a retry or a re-delivered job never leaves duplicate chunks.
- * Throws IngestionError for problems with the file; other errors may be retried by BullMQ.
- */
+// Safe to re-run: old chunks are replaced, so retries never leave duplicates.
 export async function ingestDocument(documentId) {
   const document = await Document.findById(documentId)
   if (!document || document.status !== 'processing') {
@@ -162,17 +143,42 @@ export async function ingestDocument(documentId) {
     await DocumentChunk.deleteMany(scope)
     return { skipped: true, reason: 'document changed during processing' }
   }
+  const stillProcessing = async (fields) => (await updateProcessing(document._id, fields)).matchedCount > 0
 
+  if (!(await stillProcessing({ processingStage: 'embedding', progress: PROGRESS.embedding }))) return abandon()
+  const embedSpan = PROGRESS.embedded - PROGRESS.embedding
+  let abandoned = false
+  const vectors = await embedTexts(
+    chunks.map((chunk) => chunk.content),
+    {
+      taskType: 'RETRIEVAL_DOCUMENT',
+      onBatch: async (done, total) => {
+        const progress = PROGRESS.embedding + Math.round((embedSpan * done) / total)
+        if (!(await stillProcessing({ progress }))) {
+          abandoned = true
+          throw new Error('abandoned')
+        }
+      },
+    },
+  ).catch((error) => {
+    if (abandoned) return null
+    throw error
+  })
+  if (!vectors) return abandon()
+
+  // Replace any previous chunk set (retry / re-delivered job), then save chunks with their
+  // embeddings. Inserting only now means a half-processed document is never searchable.
   await DocumentChunk.deleteMany(scope)
-  if ((await updateProcessing(document._id, { progress: PROGRESS.chunking })).matchedCount === 0) return abandon()
-
-  const span = PROGRESS.chunked - PROGRESS.chunking
+  const saveSpan = PROGRESS.saved - PROGRESS.embedded
   for (let i = 0; i < chunks.length; i += INSERT_BATCH_SIZE) {
-    const batch = chunks.slice(i, i + INSERT_BATCH_SIZE).map((chunk) => ({ ...scope, ...chunk }))
+    const batch = chunks
+      .slice(i, i + INSERT_BATCH_SIZE)
+      .map((chunk, j) => ({ ...scope, ...chunk, embedding: vectors[i + j] }))
     await DocumentChunk.insertMany(batch, { ordered: true })
     const inserted = Math.min(i + INSERT_BATCH_SIZE, chunks.length)
-    const progress = PROGRESS.chunking + Math.round((span * inserted) / chunks.length)
-    if ((await updateProcessing(document._id, { progress })).matchedCount === 0) return abandon()
+    if (!(await stillProcessing({ progress: PROGRESS.embedded + Math.round((saveSpan * inserted) / chunks.length) }))) {
+      return abandon()
+    }
   }
 
   const finished = await updateProcessing(document._id, {
@@ -185,9 +191,7 @@ export async function ingestDocument(documentId) {
   return { chunks: chunks.length }
 }
 
-// Called once the job has finally failed. The stage it failed in stays in processingStage and
-// the uploaded file is kept so the user can retry; partial chunks are removed so a failed
-// document is never searchable.
+// Keep the file so the user can retry, but drop partial chunks so it's never searchable.
 export async function markDocumentFailed(documentId, message) {
   await Document.updateOne({ _id: documentId, status: 'processing' }, { $set: { status: 'failed', errorMessage: message } })
   await DocumentChunk.deleteMany({ documentId })
