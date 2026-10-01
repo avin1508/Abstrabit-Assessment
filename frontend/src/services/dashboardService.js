@@ -1,4 +1,4 @@
-import { getConversationSummariesSync } from './chatService.js'
+import { listConversationsRequest } from '../api/conversation.api.js'
 import { store } from '../store/index.js'
 import { listToolRunsSync } from './toolService.js'
 
@@ -18,7 +18,8 @@ export async function getWorkspaceOverview(workspaceId) {
   await delay(500)
 
   const { documents, statusCounts } = getWorkspaceDocuments(workspaceId)
-  const conversations = getConversationSummariesSync(workspaceId)
+  // Real conversations of this workspace (newest first).
+  const conversations = await listConversationsRequest(workspaceId).catch(() => [])
   const toolRuns = listToolRunsSync(workspaceId)
 
   const stats = {

@@ -1,6 +1,5 @@
-import { useCallback, useState } from 'react'
-import { getAssistantContext } from '../services/chatService.js'
-import useAsyncData from '../hooks/useAsyncData.js'
+import { useState } from 'react'
+import { useSelector } from 'react-redux'
 import useAuth from '../hooks/useAuth.js'
 import useChat from '../hooks/useChat.js'
 import useMediaQuery from '../hooks/useMediaQuery.js'
@@ -50,8 +49,10 @@ export default function ChatPage() {
   const isPhone = useMediaQuery(PHONE)
 
   const chat = useChat({ workspace, userName: user.name })
-  const contextLoader = useCallback(() => getAssistantContext(workspace.id), [workspace.id])
-  const { data: context } = useAsyncData(contextLoader)
+  // Indexed documents in this workspace (null until the document list for it has loaded).
+  const indexedCount = useSelector((state) =>
+    state.document.workspaceId === workspace.id ? state.document.statusCounts.indexed : null,
+  )
 
   const [historyOpen, setHistoryOpen] = useState(false)
   const [panelOpen, setPanelOpen] = useState(true) // ≥ xl side panel
@@ -68,7 +69,6 @@ export default function ChatPage() {
     messageId: selectedMessage.id,
     citation: selection?.messageId === selectedMessage.id ? selection.citation : null,
   }
-  const indexedCount = context?.indexedDocuments ?? 0
 
 
   // [n] / source chip / source card → highlight that source and open its preview.
@@ -114,7 +114,7 @@ export default function ChatPage() {
   const sourcesProps = {
     message: selectedMessage,
     workspace,
-    indexedCount: context ? indexedCount : null,
+    indexedCount,
     activeCitation: activeSelection?.citation,
     onSelectCitation: openCitation,
   }
@@ -147,7 +147,7 @@ export default function ChatPage() {
             ) : chat.thread.status === 'new' ? (
               <ChatEmptyState
                 workspace={workspace}
-                indexedCount={indexedCount}
+                indexedCount={indexedCount ?? 0}
               />
             ) : (
               <ChatThread

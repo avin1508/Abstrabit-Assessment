@@ -17,3 +17,11 @@ export const DOCUMENT_ENDPOINTS = {
   DELETE: (id) => `/documents/${id}`,
   RETRY: (id) => `/documents/${id}/retry`,
 }
+
+export const CONVERSATION_ENDPOINTS = {
+  LIST: '/conversations',
+  CREATE: '/conversations',
+  GET: (id) => `/conversations/${id}`,
+  MESSAGES: (id) => `/conversations/${id}/messages`,
+  RETRY: (id) => `/conversations/${id}/retry`,
+}
