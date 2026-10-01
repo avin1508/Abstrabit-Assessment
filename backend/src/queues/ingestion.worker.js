@@ -5,25 +5,32 @@ import { GENERIC_FAILURE, IngestionError, ingestDocument, markDocumentFailed } f
 import { logger } from '../utils/logger.js'
 import { enqueueIngestion, INGESTION_QUEUE_NAME } from './ingestion.queue.js'
 
+// User-facing message for a failure: file problems and AI-service problems carry their own.
+function failureMessage(error) {
+  if (error instanceof IngestionError) return error.message
+  return error?.userMessage ?? GENERIC_FAILURE
+}
+
 // Runs ingestion for one document. The processing itself lives in ingestion.service.js.
-async function processIngestionJob(job) {
+// Exported for tests.
+export async function processIngestionJob(job) {
   const { documentId } = job.data
   try {
     const result = await ingestDocument(documentId)
     logger.info(`[ingestion] document ${documentId}:`, result.skipped ? `skipped (${result.reason})` : `${result.chunks} chunks`)
     return result
   } catch (error) {
-    const isFileProblem = error instanceof IngestionError
+    // Retrying won't fix a broken file or a missing/rejected API key.
+    const permanent = error instanceof IngestionError || error?.retryable === false
     const lastAttempt = job.attemptsMade + 1 >= (job.opts.attempts ?? 1)
 
-    if (isFileProblem || lastAttempt) {
-      // Only file problems have user-facing messages; anything else gets a generic one.
-      await markDocumentFailed(documentId, isFileProblem ? error.message : GENERIC_FAILURE)
+    if (permanent || lastAttempt) await markDocumentFailed(documentId, failureMessage(error))
+    if (!(error instanceof IngestionError)) {
+      logger.error(`[ingestion] document ${documentId} attempt ${job.attemptsMade + 1}:`, error.message)
     }
-    if (!isFileProblem) logger.error(`[ingestion] document ${documentId} attempt ${job.attemptsMade + 1}:`, error.message)
 
-    // A broken file won't be fixed by retrying, so skip BullMQ's remaining attempts.
-    throw isFileProblem ? new UnrecoverableError(error.message) : error
+    // Skip BullMQ's remaining attempts for permanent problems.
+    throw permanent ? new UnrecoverableError(error.message) : error
   }
 }
 

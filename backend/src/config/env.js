@@ -3,7 +3,8 @@ import 'dotenv/config'
 // Required for the server to boot (database, queue, auth).
 const REQUIRED = ['DB_USERNAME', 'DB_PASSWORD', 'DB_CLUSTER_URL', 'DB_NAME', 'REDIS_URL', 'JWT_SECRET']
 
-// Needed by later modules (AI, Discord). Allowed to be empty for now.
+// Optional at boot. Without GEMINI_API_KEY, document embedding and search fail with a clear
+// message; DISCORD_WEBHOOK_URL is used by a later module.
 const LATER = ['GEMINI_API_KEY', 'DISCORD_WEBHOOK_URL']
 
 const missing = REQUIRED.filter((key) => !process.env[key]?.trim())

@@ -3,19 +3,20 @@ import mammoth from 'mammoth'
 import { PDFParse } from 'pdf-parse'
 import { resolveStoragePath } from '../config/storage.js'
 import { Document, DocumentChunk } from '../models/index.js'
+import { embedTexts } from './embedding.service.js'
 
 /*
  * Document ingestion, run by the BullMQ worker (never inside an HTTP request):
- *   extract text -> split into chunks -> save document_chunks -> mark indexed.
- * Embeddings are added in the next module; chunks are saved without them.
+ *   extract text -> split into chunks -> embed chunks (Gemini) -> save document_chunks -> indexed.
  */
 
 const CHUNK_SIZE = 1000 // characters
 const CHUNK_OVERLAP = 150 // characters repeated between neighbouring chunks
 const INSERT_BATCH_SIZE = 100
 
-// Progress milestones (0–100) saved on the Document.
-const PROGRESS = { extracting: 5, extracted: 30, chunking: 40, chunked: 90, done: 100 }
+// Progress milestones (0–100) saved on the Document:
+// extracting 5 → chunking 30 → embedding 40…85 (per batch) → saving 85…99 → indexed 100.
+const PROGRESS = { extracting: 5, extracted: 30, embedding: 40, embedded: 85, saved: 99, done: 100 }
 
 // A problem with the file itself. Retrying won't help, and the message is safe to show users.
 export class IngestionError extends Error {
@@ -136,7 +137,8 @@ function updateProcessing(documentId, fields) {
 /*
  * Processes one document. Safe to run again for the same document: existing chunks are
  * replaced, so a retry or a re-delivered job never leaves duplicate chunks.
- * Throws IngestionError for problems with the file; other errors may be retried by BullMQ.
+ * Throws IngestionError for problems with the file and EmbeddingError for AI-service problems
+ * (embedding.service.js); other errors may be retried by BullMQ.
  */
 export async function ingestDocument(documentId) {
   const document = await Document.findById(documentId)
@@ -162,17 +164,43 @@ export async function ingestDocument(documentId) {
     await DocumentChunk.deleteMany(scope)
     return { skipped: true, reason: 'document changed during processing' }
   }
+  const stillProcessing = async (fields) => (await updateProcessing(document._id, fields)).matchedCount > 0
 
+  // Embed every chunk with Gemini (batches of 100); progress follows the batches done.
+  if (!(await stillProcessing({ processingStage: 'embedding', progress: PROGRESS.embedding }))) return abandon()
+  const embedSpan = PROGRESS.embedded - PROGRESS.embedding
+  let abandoned = false
+  const vectors = await embedTexts(
+    chunks.map((chunk) => chunk.content),
+    {
+      taskType: 'RETRIEVAL_DOCUMENT',
+      onBatch: async (done, total) => {
+        const progress = PROGRESS.embedding + Math.round((embedSpan * done) / total)
+        if (!(await stillProcessing({ progress }))) {
+          abandoned = true
+          throw new Error('abandoned')
+        }
+      },
+    },
+  ).catch((error) => {
+    if (abandoned) return null
+    throw error
+  })
+  if (!vectors) return abandon()
+
+  // Replace any previous chunk set (retry / re-delivered job), then save chunks with their
+  // embeddings. Inserting only now means a half-processed document is never searchable.
   await DocumentChunk.deleteMany(scope)
-  if ((await updateProcessing(document._id, { progress: PROGRESS.chunking })).matchedCount === 0) return abandon()
-
-  const span = PROGRESS.chunked - PROGRESS.chunking
+  const saveSpan = PROGRESS.saved - PROGRESS.embedded
   for (let i = 0; i < chunks.length; i += INSERT_BATCH_SIZE) {
-    const batch = chunks.slice(i, i + INSERT_BATCH_SIZE).map((chunk) => ({ ...scope, ...chunk }))
+    const batch = chunks
+      .slice(i, i + INSERT_BATCH_SIZE)
+      .map((chunk, j) => ({ ...scope, ...chunk, embedding: vectors[i + j] }))
     await DocumentChunk.insertMany(batch, { ordered: true })
     const inserted = Math.min(i + INSERT_BATCH_SIZE, chunks.length)
-    const progress = PROGRESS.chunking + Math.round((span * inserted) / chunks.length)
-    if ((await updateProcessing(document._id, { progress })).matchedCount === 0) return abandon()
+    if (!(await stillProcessing({ progress: PROGRESS.embedded + Math.round((saveSpan * inserted) / chunks.length) }))) {
+      return abandon()
+    }
   }
 
   const finished = await updateProcessing(document._id, {

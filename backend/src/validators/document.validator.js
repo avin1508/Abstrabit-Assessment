@@ -20,5 +20,20 @@ export const listDocumentsQuerySchema = z.object({
   search: z.string().trim().max(100, { error: 'search must be at most 100 characters' }).optional(),
 })
 
+// GET /api/documents/search?q=refund+window&limit=5
+export const searchDocumentsQuerySchema = z.object({
+  q: z
+    .string({ error: 'q is required' })
+    .trim()
+    .min(1, { error: 'q is required' })
+    .max(500, { error: 'q must be at most 500 characters' }),
+  limit: z.coerce
+    .number({ error: 'limit must be a number' })
+    .int()
+    .min(1, { error: 'limit must be between 1 and 20' })
+    .max(20, { error: 'limit must be between 1 and 20' })
+    .default(5),
+})
+
 // Uploads take no body fields: uploadedBy, workspace, status and processingStage are all
 // set by the server, and anything else in the multipart body is ignored.

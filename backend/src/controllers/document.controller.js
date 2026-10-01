@@ -1,5 +1,10 @@
 import * as documentService from '../services/document.service.js'
-import { documentParamsSchema, listDocumentsQuerySchema } from '../validators/document.validator.js'
+import { searchSimilarChunks } from '../services/retrieval.service.js'
+import {
+  documentParamsSchema,
+  listDocumentsQuerySchema,
+  searchDocumentsQuerySchema,
+} from '../validators/document.validator.js'
 
 // req.workspace is set by requireWorkspace (ownership already verified).
 
@@ -16,6 +21,13 @@ export async function listDocuments(req, res) {
   const query = listDocumentsQuerySchema.parse(req.query)
   const data = await documentService.listDocuments(req.workspace._id, query)
   res.json({ success: true, data })
+}
+
+// Semantic search over the verified workspace's chunks (retrieval check before chat).
+export async function searchDocuments(req, res) {
+  const { q, limit } = searchDocumentsQuerySchema.parse(req.query)
+  const results = await searchSimilarChunks({ workspaceId: req.workspace._id, query: q, limit })
+  res.json({ success: true, data: { results } })
 }
 
 export async function getDocumentStatus(req, res) {

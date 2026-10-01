@@ -4,6 +4,7 @@ import {
   getDocumentStatus,
   listDocuments,
   retryDocument,
+  searchDocuments,
   uploadDocument,
 } from '../controllers/document.controller.js'
 import { authenticate } from '../middleware/auth.middleware.js'
@@ -18,6 +19,7 @@ router.use(authenticate, requireWorkspace)
 
 router.post('/', receiveFile, uploadDocument)
 router.get('/', listDocuments)
+router.get('/search', searchDocuments)
 router.get('/:id/status', getDocumentStatus)
 router.delete('/:id', deleteDocument)
 router.post('/:id/retry', retryDocument)

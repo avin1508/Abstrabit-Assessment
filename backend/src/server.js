@@ -11,7 +11,7 @@ import './models/index.js'
 
 async function start() {
   if (pendingLaterVariables.length) {
-    logger.warn(`Not set yet (needed by later modules): ${pendingLaterVariables.join(', ')}`)
+    logger.warn(`Not set (related features are disabled): ${pendingLaterVariables.join(', ')}`)
   }
 
   await connectDB()
