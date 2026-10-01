@@ -17,7 +17,7 @@ function sanitize(value, depth = 0) {
   if (typeof value === 'string') {
     let clean = value
     if (env.discordWebhookUrl) clean = clean.split(env.discordWebhookUrl).join('[redacted]')
-    clean = clean.replace(/https?:\/\/\S*discord(?:app)?\.com\/api\/webhooks\/\S*/gi, '[redacted webhook]')
+    clean = clean.replace(/\S*discord(?:app)?\.com\/api\/webhooks\/\S*/gi, '[redacted webhook]')
     return clean.length > MAX_LOGGED_STRING ? `${clean.slice(0, MAX_LOGGED_STRING)}…` : clean
   }
   if (Array.isArray(value)) return depth > 3 ? [] : value.slice(0, 20).map((item) => sanitize(item, depth + 1))
@@ -101,10 +101,10 @@ export async function executeToolCall({ name, args, context }) {
   }
   const validArgs = name === 'send_summary' ? { ...parsed.data, channel: parsed.data.channel || DEFAULT_CHANNEL } : parsed.data
 
+  // Don't write a log row here: the context failed verification, so its workspace can't be trusted.
   if (!(await isAuthorized(context))) {
-    const errorMessage = 'Not allowed in this workspace.'
-    const toolCall = await log({ context, toolName: name, args: validArgs, status: 'failed', errorMessage, started })
-    return { toolCall, response: { success: false, error: errorMessage } }
+    logger.warn(`[tools] rejected ${name}: context failed authorization`)
+    return { toolCall: null, response: { success: false, error: 'Not allowed in this workspace.' } }
   }
 
   const earlier = await findEarlierSuccess(name, validArgs, context)

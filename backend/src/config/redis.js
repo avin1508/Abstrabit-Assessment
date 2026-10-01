@@ -12,12 +12,13 @@ export function createRedisConnection(name) {
 export async function verifyRedisConnection() {
   const probe = new Redis(env.redisUrl, { lazyConnect: true, maxRetriesPerRequest: 1, retryStrategy: () => null })
   probe.on('error', () => {})
+  const safeUrl = env.redisUrl.replace(/\/\/.*@/, '//***@')
   try {
     await probe.connect()
     await probe.ping()
-    logger.info(`Redis connected (${env.redisUrl.replace(/\/\/.*@/, '//***@')})`)
+    logger.info(`Redis connected (${safeUrl})`)
   } catch (error) {
-    throw new Error(`Cannot connect to Redis at ${env.redisUrl}: ${error.message}`)
+    throw new Error(`Cannot connect to Redis at ${safeUrl}: ${error.message}`)
   } finally {
     probe.disconnect()
   }
